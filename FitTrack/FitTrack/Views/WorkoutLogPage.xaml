@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitTrack.ViewModels"
+             xmlns:models="clr-namespace:FitTrack.Models"
+             x:Class="FitTrack.Views.WorkoutLogPage"
+             x:DataType="vm:WorkoutLogViewModel"
+             Title="Workout Log">
+
+    <Grid RowDefinitions="*, Auto">
+
+        <RefreshView Grid.Row="0"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding LoadWorkoutsCommand}">
+
+            <CollectionView ItemsSource="{Binding Workouts}"
+                             SelectionMode="None"
+                             EmptyView="No workouts logged yet. Tap the button below to log your first one!">
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Workout">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Delete"
+                                               BackgroundColor="IndianRed"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=DeleteWorkoutCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto">
+                                <!-- Tapping anywhere on the row (outside the swipe area) navigates
+                                     to WorkoutDetailPage in "edit" mode via SelectWorkoutCommand,
+                                     which lives on WorkoutLogViewModel (not this row's own
+                                     Workout DataContext) - hence the RelativeSource binding. -->
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=SelectWorkoutCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+
+                                <Label Grid.Column="0"
+                                       Text="{Binding ActivityType}"
+                                       FontAttributes="Bold"
+                                       VerticalOptions="Center"
+                                       WidthRequest="100" />
+
+                                <VerticalStackLayout Grid.Column="1" Margin="12,0" VerticalOptions="Center">
+                                    <Label Text="{Binding DateLogged, StringFormat='{0:MMM d, yyyy}'}"
+                                           FontSize="12"
+                                           TextColor="Gray" />
+                                    <Label Text="{Binding DurationMinutes, StringFormat='{0} minutes'}"
+                                           FontSize="12" />
+                                </VerticalStackLayout>
+
+                                <Label Grid.Column="2"
+                                       Text="{Binding CaloriesBurned, StringFormat='{0} cal'}"
+                                       VerticalOptions="Center"
+                                       FontAttributes="Bold" />
+
+                            </Grid>
+
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <Button Grid.Row="1"
+                Text="+ Log Workout"
+                Command="{Binding AddWorkoutCommand}"
+                Margin="16"
+                CornerRadius="24"
+                HeightRequest="48" />
+
+    </Grid>
+</ContentPage>

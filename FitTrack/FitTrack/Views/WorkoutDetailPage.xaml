@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitTrack.ViewModels"
+             x:Class="FitTrack.Views.WorkoutDetailPage"
+             x:DataType="vm:WorkoutDetailViewModel"
+             Title="{Binding PageTitle}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Text="Activity Type" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding ActivityTypes}"
+                    SelectedItem="{Binding SelectedActivityType}" />
+
+            <Label Text="Intensity" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding IntensityLevels}"
+                    SelectedItem="{Binding SelectedIntensity}" />
+
+            <Label Text="Duration (minutes)" FontAttributes="Bold" />
+            <Entry Text="{Binding DurationMinutes}" Keyboard="Numeric" />
+
+            <Label Text="Calories Burned" FontAttributes="Bold" />
+            <Entry Text="{Binding CaloriesBurned}" Keyboard="Numeric" />
+
+            <Label Text="Date" FontAttributes="Bold" />
+            <DatePicker Date="{Binding DateLogged}" />
+
+            <HorizontalStackLayout Spacing="12">
+                <Label Text="Recurring workout" FontAttributes="Bold" VerticalOptions="Center" />
+                <Switch IsToggled="{Binding IsRecurring}" />
+            </HorizontalStackLayout>
+
+            <Label Text="Notes" FontAttributes="Bold" />
+            <Editor Text="{Binding Notes}" HeightRequest="100" AutoSize="TextChanges" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,16,0,0">
+                <Button Grid.Column="0"
+                        Text="Cancel"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="LightGray"
+                        TextColor="Black" />
+
+                <Button Grid.Column="1"
+                        Text="Save"
+                        Command="{Binding SaveCommand}" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
