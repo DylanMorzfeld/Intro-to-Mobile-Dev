@@ -35,6 +35,11 @@ public static class MauiProgram
         builder.Services.AddTransient<WorkoutLogPage>();
         builder.Services.AddTransient<WorkoutDetailViewModel>();
         builder.Services.AddTransient<WorkoutDetailPage>();
+        builder.Services.AddSingleton<IDietRepository, LocalDietRepository>();
+        builder.Services.AddTransient<DietViewModel>();
+        builder.Services.AddTransient<MealDetailViewModel>();
+        builder.Services.AddTransient<DietTrackerPage>();
+        builder.Services.AddTransient<MealDetailPage>();
 
 
 #if DEBUG

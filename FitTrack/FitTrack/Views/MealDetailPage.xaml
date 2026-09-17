@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitTrack.ViewModels"
+             x:Class="FitTrack.Views.MealDetailPage"
+             x:DataType="vm:MealDetailViewModel"
+             Title="{Binding PageTitle}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Text="Meal Type" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding MealTypes}"
+                    SelectedItem="{Binding SelectedMealType}" />
+
+            <Label Text="Food / Meal Name" FontAttributes="Bold" />
+            <Entry Text="{Binding Name}" Placeholder="e.g. Grilled chicken salad" />
+
+            <Label Text="Calories" FontAttributes="Bold" />
+            <Entry Text="{Binding Calories}" Keyboard="Numeric" />
+
+            <Label Text="Protein (g)" FontAttributes="Bold" />
+            <Entry Text="{Binding Protein}" Keyboard="Numeric" />
+
+            <Label Text="Carbs (g)" FontAttributes="Bold" />
+            <Entry Text="{Binding Carbs}" Keyboard="Numeric" />
+
+            <Label Text="Fat (g)" FontAttributes="Bold" />
+            <Entry Text="{Binding Fat}" Keyboard="Numeric" />
+
+            <Label Text="Date" FontAttributes="Bold" />
+            <DatePicker Date="{Binding DateLogged}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,16,0,0">
+                <Button Grid.Column="0"
+                        Text="Cancel"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="LightGray"
+                        TextColor="Black" />
+
+                <Button Grid.Column="1"
+                        Text="Save"
+                        Command="{Binding SaveCommand}" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

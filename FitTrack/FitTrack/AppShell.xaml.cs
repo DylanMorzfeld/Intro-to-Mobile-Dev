@@ -12,5 +12,6 @@ public partial class AppShell : Shell
         // dynamically (with a WorkoutId parameter) from WorkoutLogPage.
         // Registering it as a route makes Shell.Current.GoToAsync(...) work.
         Routing.RegisterRoute(nameof(WorkoutDetailPage), typeof(WorkoutDetailPage));
+        Routing.RegisterRoute(nameof(MealDetailPage), typeof(MealDetailPage));
     }
 }

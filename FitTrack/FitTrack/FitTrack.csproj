@@ -74,12 +74,21 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Update="Views\DietTrackerPage.xaml.cs">
+	    <DependentUpon>DietTrackerPage.xaml</DependentUpon>
+	  </Compile>
 	  <Compile Update="Views\WorkoutLogPage.xaml.cs">
 	    <DependentUpon>WorkoutLogPage.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
 
 	<ItemGroup>
+	  <MauiXaml Update="Views\DietTrackerPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\MealDetailPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\WorkoutDetailPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>

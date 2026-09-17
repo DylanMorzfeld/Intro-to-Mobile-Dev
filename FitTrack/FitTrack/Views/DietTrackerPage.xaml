@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitTrack.ViewModels"
+             xmlns:models="clr-namespace:FitTrack.Models"
+             x:Class="FitTrack.Views.DietTrackerPage"
+             x:DataType="vm:DietViewModel"
+             Title="Diet Tracker">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Daily nutrition summary vs. goal -->
+        <Border Grid.Row="0" Margin="16,16,16,8" Padding="16" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Today's Nutrition" FontAttributes="Bold" FontSize="16" />
+                <Label>
+                    <Label.FormattedText>
+                        <FormattedString>
+                            <Span Text="{Binding TotalCalories}" FontAttributes="Bold" />
+                            <Span Text=" / " />
+                            <Span Text="{Binding CalorieGoal}" />
+                            <Span Text=" cal" />
+                        </FormattedString>
+                    </Label.FormattedText>
+                </Label>
+                <ProgressBar>
+                    <ProgressBar.Progress>
+                        <MultiBinding Converter="{StaticResource CalorieProgressConverter}">
+                            <Binding Path="TotalCalories" />
+                            <Binding Path="CalorieGoal" />
+                        </MultiBinding>
+                    </ProgressBar.Progress>
+                </ProgressBar>
+                <Label Text="{Binding TotalProtein, StringFormat='Protein: {0:F0}g'}" FontSize="12" />
+                <Label Text="{Binding TotalCarbs, StringFormat='Carbs: {0:F0}g'}" FontSize="12" />
+                <Label Text="{Binding TotalFat, StringFormat='Fat: {0:F0}g'}" FontSize="12" />
+            </VerticalStackLayout>
+        </Border>
+
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding LoadMealsCommand}">
+
+            <CollectionView ItemsSource="{Binding Meals}"
+                             SelectionMode="None"
+                             EmptyView="No meals logged today. Tap the button below to log your first one!">
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Meal">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Delete"
+                                               BackgroundColor="IndianRed"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DietViewModel}}, Path=DeleteMealCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DietViewModel}}, Path=SelectMealCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+
+                                <Label Grid.Column="0"
+                                       Text="{Binding MealType}"
+                                       FontAttributes="Bold"
+                                       VerticalOptions="Center"
+                                       WidthRequest="90" />
+
+                                <VerticalStackLayout Grid.Column="1" Margin="12,0" VerticalOptions="Center">
+                                    <Label Text="{Binding Name}" FontSize="14" />
+                                    <Label Text="{Binding DateLogged, StringFormat='{0:h:mm tt}'}"
+                                           FontSize="12"
+                                           TextColor="Gray" />
+                                </VerticalStackLayout>
+
+                                <Label Grid.Column="2"
+                                       Text="{Binding Calories, StringFormat='{0} cal'}"
+                                       VerticalOptions="Center"
+                                       FontAttributes="Bold" />
+                            </Grid>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <Button Grid.Row="2"
+                Text="+ Log Meal"
+                Command="{Binding AddMealCommand}"
+                Margin="16"
+                CornerRadius="24"
+                HeightRequest="48" />
+
+    </Grid>
+</ContentPage>

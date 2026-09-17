@@ -7,8 +7,16 @@
     xmlns:views="clr-namespace:FitTrack.Views"
     Title="FitTrack">
 
-    <ShellContent Title="Workouts"
-              ContentTemplate="{DataTemplate views:WorkoutLogPage}"
-              Route="WorkoutLogPage" />
+    <TabBar>
+        <ShellContent Title="Workouts"
+                      Icon="dotnet_bot.png"
+                      ContentTemplate="{DataTemplate views:WorkoutLogPage}"
+                      Route="WorkoutLogPage" />
+
+        <ShellContent Title="Diet"
+                      Icon="dotnet_bot.png"
+                      ContentTemplate="{DataTemplate views:DietTrackerPage}"
+                      Route="DietTrackerPage" />
+    </TabBar>
 
 </Shell>
