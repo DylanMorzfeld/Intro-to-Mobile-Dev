@@ -87,9 +87,26 @@ public partial class WorkoutDetailViewModel : ObservableObject
         IsRecurring = existing.IsRecurring;
     }
 
+    [ObservableProperty]
+    private string? validationMessage;
+
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (DurationMinutes <= 0)
+        {
+            ValidationMessage = "Duration must be greater than 0 minutes.";
+            return;
+        }
+
+        if (CaloriesBurned < 0)
+        {
+            ValidationMessage = "Calories burned can't be negative.";
+            return;
+        }
+
+        ValidationMessage = null;
+
         _workout.ActivityType = SelectedActivityType;
         _workout.Intensity = SelectedIntensity;
         _workout.DurationMinutes = DurationMinutes;
@@ -99,8 +116,6 @@ public partial class WorkoutDetailViewModel : ObservableObject
         _workout.IsRecurring = IsRecurring;
 
         await _workoutRepository.SaveAsync(_workout);
-
-        // Navigate back to the workout list after saving.
         await Shell.Current.GoToAsync("..");
     }
 

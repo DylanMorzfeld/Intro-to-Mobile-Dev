@@ -43,6 +43,12 @@
 
                                     <ProgressBar Progress="{Binding ., Converter={StaticResource GoalProgressConverter}}" />
 
+                                    <Label Text="🏆 Goal achieved! Great work."
+                                           TextColor="Green"
+                                           FontAttributes="Bold"
+                                           FontSize="13"
+                                           IsVisible="{Binding ., Converter={StaticResource GoalCompletedConverter}}" />
+
                                     <Label FontSize="12">
                                         <Label.FormattedText>
                                             <FormattedString>

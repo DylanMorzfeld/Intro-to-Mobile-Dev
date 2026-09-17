@@ -80,6 +80,15 @@ public partial class GoalsViewModel : ObservableObject
         if (goal is null)
             return;
 
+        bool confirmed = await Shell.Current.DisplayAlert(
+            "Delete Goal",
+            $"Delete the goal \"{goal.Description}\"? This can't be undone.",
+            "Delete",
+            "Cancel");
+
+        if (!confirmed)
+            return;
+
         await _goalRepository.DeleteAsync(goal);
         Goals.Remove(goal);
     }

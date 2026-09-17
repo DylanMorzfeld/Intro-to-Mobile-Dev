@@ -34,6 +34,11 @@
             <Label Text="Target Date" FontAttributes="Bold" />
             <DatePicker Date="{Binding TargetDate}" />
 
+            <Label Text="{Binding ValidationMessage}"
+                   TextColor="Red"
+                   FontSize="13"
+                   IsVisible="{Binding ValidationMessage, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,16,0,0">
                 <Button Grid.Column="0"
                         Text="Cancel"

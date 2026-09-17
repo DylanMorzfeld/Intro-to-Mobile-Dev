@@ -72,9 +72,26 @@ public partial class MealDetailViewModel : ObservableObject
         DateLogged = existing.DateLogged;
     }
 
+    [ObservableProperty]
+    private string? validationMessage;
+
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            ValidationMessage = "Please enter a food or meal name.";
+            return;
+        }
+
+        if (Calories < 0)
+        {
+            ValidationMessage = "Calories can't be negative.";
+            return;
+        }
+
+        ValidationMessage = null;
+
         _meal.MealType = SelectedMealType;
         _meal.Name = Name;
         _meal.Calories = Calories;

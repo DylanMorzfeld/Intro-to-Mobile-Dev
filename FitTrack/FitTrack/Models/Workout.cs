@@ -68,4 +68,11 @@ public class Workout
     /// is a good candidate for a later milestone once local notifications are wired up.
     /// </summary>
     public bool IsRecurring { get; set; }
+
+    /// <summary>
+    /// Whether the user has marked this workout as completed. Set via the
+    /// right-swipe "Complete" gesture on WorkoutLogPage, separate from
+    /// IsRecurring (which is about scheduling, not completion status).
+    /// </summary>
+    public bool IsCompleted { get; set; }
 }

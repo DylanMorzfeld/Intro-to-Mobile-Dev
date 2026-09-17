@@ -34,6 +34,15 @@
             <Label Text="Notes" FontAttributes="Bold" />
             <Editor Text="{Binding Notes}" HeightRequest="100" AutoSize="TextChanges" />
 
+            <!-- Only shown when SaveAsync sets a validation message (e.g. duration <= 0).
+                 IsNotNullOrEmptyConverter keeps this show/hide logic out of the
+                 ViewModel and code-behind, consistent with how CalorieProgressConverter
+                 and GoalProgressConverter handle their own display-only calculations. -->
+            <Label Text="{Binding ValidationMessage}"
+                   TextColor="Red"
+                   FontSize="13"
+                   IsVisible="{Binding ValidationMessage, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
             <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,16,0,0">
                 <Button Grid.Column="0"
                         Text="Cancel"

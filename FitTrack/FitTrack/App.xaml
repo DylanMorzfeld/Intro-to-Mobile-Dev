@@ -13,6 +13,11 @@
 
             <converters:CalorieProgressConverter x:Key="CalorieProgressConverter"/>
             <converters:GoalProgressConverter x:Key="GoalProgressConverter" />
+            <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+            <converters:GoalCompletedConverter x:Key="GoalCompletedConverter" />
+            <converters:CompleteSwipeTextConverter x:Key="CompleteSwipeTextConverter" />
+            <converters:CompletionStyleConverter x:Key="CompletionStyleConverter" />
+            
         </ResourceDictionary>
     </Application.Resources>
 </Application>

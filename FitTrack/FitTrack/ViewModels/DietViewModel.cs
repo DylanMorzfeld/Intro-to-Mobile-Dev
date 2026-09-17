@@ -108,6 +108,15 @@ public partial class DietViewModel : ObservableObject
         if (meal is null)
             return;
 
+        bool confirmed = await Shell.Current.DisplayAlert(
+            "Delete Meal",
+            $"Delete \"{meal.Name}\" from your log?",
+            "Delete",
+            "Cancel");
+
+        if (!confirmed)
+            return;
+
         await _dietRepository.DeleteAsync(meal);
         Meals.Remove(meal);
         RecalculateTotals();

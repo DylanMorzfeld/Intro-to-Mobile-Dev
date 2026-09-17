@@ -20,6 +20,17 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Workout">
                         <SwipeView>
+                            <!-- Swiping RIGHT reveals these (LeftItems) - toggles completion status. -->
+                            <SwipeView.LeftItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="{Binding IsCompleted, Converter={StaticResource CompleteSwipeTextConverter}}"
+                                               BackgroundColor="MediumSeaGreen"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=ToggleCompleteCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.LeftItems>
+
+                            <!-- Swiping LEFT reveals these (RightItems) - deletes the workout. -->
                             <SwipeView.RightItems>
                                 <SwipeItems>
                                     <SwipeItem Text="Delete"
@@ -29,7 +40,14 @@
                                 </SwipeItems>
                             </SwipeView.RightItems>
 
-                            <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto">
+                            <!-- BackgroundColor and the ActivityType label's Opacity both derive
+                                 from the same IsCompleted flag via one shared converter
+                                 (CompletionStyleConverter), distinguished by ConverterParameter -
+                                 avoids needing a separate converter class per visual property. -->
+                            <Grid Padding="16,12"
+                                  ColumnDefinitions="Auto,*,Auto"
+                                  BackgroundColor="{Binding IsCompleted, Converter={StaticResource CompletionStyleConverter}, ConverterParameter=Background}">
+
                                 <!-- Tapping anywhere on the row (outside the swipe area) navigates
                                      to WorkoutDetailPage in "edit" mode via SelectWorkoutCommand,
                                      which lives on WorkoutLogViewModel (not this row's own
@@ -44,7 +62,8 @@
                                        Text="{Binding ActivityType}"
                                        FontAttributes="Bold"
                                        VerticalOptions="Center"
-                                       WidthRequest="100" />
+                                       WidthRequest="100"
+                                       Opacity="{Binding IsCompleted, Converter={StaticResource CompletionStyleConverter}, ConverterParameter=Opacity}" />
 
                                 <VerticalStackLayout Grid.Column="1" Margin="12,0" VerticalOptions="Center">
                                     <Label Text="{Binding DateLogged, StringFormat='{0:MMM d, yyyy}'}"
@@ -54,10 +73,17 @@
                                            FontSize="12" />
                                 </VerticalStackLayout>
 
-                                <Label Grid.Column="2"
-                                       Text="{Binding CaloriesBurned, StringFormat='{0} cal'}"
-                                       VerticalOptions="Center"
-                                       FontAttributes="Bold" />
+                                <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                                    <Label Text="✓"
+                                           TextColor="MediumSeaGreen"
+                                           FontAttributes="Bold"
+                                           FontSize="16"
+                                           IsVisible="{Binding IsCompleted}"
+                                           VerticalOptions="Center" />
+                                    <Label Text="{Binding CaloriesBurned, StringFormat='{0} cal'}"
+                                           VerticalOptions="Center"
+                                           FontAttributes="Bold" />
+                                </HorizontalStackLayout>
 
                             </Grid>
 

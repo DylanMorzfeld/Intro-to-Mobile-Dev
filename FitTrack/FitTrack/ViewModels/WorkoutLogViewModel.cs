@@ -117,7 +117,40 @@ public partial class WorkoutLogViewModel : ObservableObject
         if (workout is null)
             return;
 
+        bool confirmed = await Shell.Current.DisplayAlert(
+            "Delete Workout",
+            $"Delete this {workout.ActivityType} workout from {workout.DateLogged:MMM d}?",
+            "Delete",
+            "Cancel");
+
+        if (!confirmed)
+            return;
+
         await _workoutRepository.DeleteAsync(workout);
         Workouts.Remove(workout);
+    }
+
+    /// <summary>
+    /// Toggles a workout's completed status, triggered by the right-swipe
+    /// "Complete" gesture. Persists immediately so the change survives an
+    /// app restart, then refreshes the in-memory list item so the UI updates.
+    /// </summary>
+    [RelayCommand]
+    private async Task ToggleCompleteAsync(Workout? workout)
+    {
+        if (workout is null)
+            return;
+
+        workout.IsCompleted = !workout.IsCompleted;
+        await _workoutRepository.SaveAsync(workout);
+
+        // Replacing the item (rather than just mutating it in place) forces
+        // the CollectionView to re-render this row, since Workout isn't an
+        // ObservableObject itself and won't raise PropertyChanged on its own.
+        var index = Workouts.IndexOf(workout);
+        if (index >= 0)
+        {
+            Workouts[index] = workout;
+        }
     }
 }

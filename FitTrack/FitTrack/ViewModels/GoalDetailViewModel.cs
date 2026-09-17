@@ -77,9 +77,43 @@ public partial class GoalDetailViewModel : ObservableObject
         TargetDate = existing.TargetDate ?? DateTime.Now.AddMonths(1);
     }
 
+    [ObservableProperty]
+    private string? validationMessage;
+
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (string.IsNullOrWhiteSpace(Description))
+        {
+            ValidationMessage = "Please enter a goal description.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Unit))
+        {
+            ValidationMessage = "Please enter a unit (e.g. lbs, miles).";
+            return;
+        }
+
+        // For "decreasing" goals like weight loss, the target must be LOWER
+        // than the starting point - otherwise "progress" and "completion"
+        // can't be calculated meaningfully.
+        bool isDecreasingGoal = SelectedGoalType == GoalType.WeightLoss;
+
+        if (isDecreasingGoal && TargetValue >= StartValue)
+        {
+            ValidationMessage = "For weight loss, your target should be lower than your starting value.";
+            return;
+        }
+
+        if (!isDecreasingGoal && TargetValue <= StartValue)
+        {
+            ValidationMessage = "Your target should be higher than your starting value.";
+            return;
+        }
+
+        ValidationMessage = null;
+
         _goal.GoalType = SelectedGoalType;
         _goal.Description = Description;
         _goal.StartValue = StartValue;
