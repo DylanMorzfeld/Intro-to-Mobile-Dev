@@ -40,6 +40,11 @@ public static class MauiProgram
         builder.Services.AddTransient<MealDetailViewModel>();
         builder.Services.AddTransient<DietTrackerPage>();
         builder.Services.AddTransient<MealDetailPage>();
+        builder.Services.AddSingleton<IGoalRepository, LocalGoalRepository>();
+        builder.Services.AddTransient<GoalsViewModel>();
+        builder.Services.AddTransient<GoalDetailViewModel>();
+        builder.Services.AddTransient<GoalsProgressPage>();
+        builder.Services.AddTransient<GoalDetailPage>();
 
 
 #if DEBUG

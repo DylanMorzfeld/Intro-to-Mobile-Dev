@@ -17,6 +17,11 @@
                       Icon="dotnet_bot.png"
                       ContentTemplate="{DataTemplate views:DietTrackerPage}"
                       Route="DietTrackerPage" />
+
+        <ShellContent Title="Goals"
+                      Icon="dotnet_bot.png"
+                      ContentTemplate="{DataTemplate views:GoalsProgressPage}"
+                      Route="GoalsProgressPage" />
     </TabBar>
 
 </Shell>

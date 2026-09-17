@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitTrack.ViewModels"
+             xmlns:models="clr-namespace:FitTrack.Models"
+             x:Class="FitTrack.Views.GoalsProgressPage"
+             x:DataType="vm:GoalsViewModel"
+             Title="Goals">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <RefreshView Grid.Row="0"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding LoadGoalsCommand}">
+
+            <CollectionView ItemsSource="{Binding Goals}"
+                             SelectionMode="None"
+                             EmptyView="No goals yet. Tap the button below to set your first one!">
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:FitnessGoal">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Delete"
+                                               BackgroundColor="IndianRed"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GoalsViewModel}}, Path=DeleteGoalCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Border Margin="12,6" Padding="16" StrokeShape="RoundRectangle 12">
+                                <VerticalStackLayout Spacing="8">
+                                    <VerticalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GoalsViewModel}}, Path=SelectGoalCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </VerticalStackLayout.GestureRecognizers>
+
+                                    <Label Text="{Binding Description}" FontAttributes="Bold" FontSize="16" />
+                    
+                                    <Label Text="{Binding GoalType}" FontSize="12" TextColor="Gray" />
+
+                                    <ProgressBar Progress="{Binding ., Converter={StaticResource GoalProgressConverter}}" />
+
+                                    <Label FontSize="12">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding CurrentValue}" />
+                                                <Span Text=" / " />
+                                                <Span Text="{Binding TargetValue}" />
+                                                <Span Text=" " />
+                                                <Span Text="{Binding Unit}" />
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </VerticalStackLayout>
+                            </Border>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <Button Grid.Row="1"
+                Text="+ Set New Goal"
+                Command="{Binding AddGoalCommand}"
+                Margin="16"
+                CornerRadius="24"
+                HeightRequest="48" />
+
+    </Grid>
+</ContentPage>

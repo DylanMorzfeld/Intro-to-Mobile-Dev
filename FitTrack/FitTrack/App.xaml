@@ -11,7 +11,8 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <converters:CalorieProgressConverter x:Key="CalorieProgressConverter" />
+            <converters:CalorieProgressConverter x:Key="CalorieProgressConverter"/>
+            <converters:GoalProgressConverter x:Key="GoalProgressConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
