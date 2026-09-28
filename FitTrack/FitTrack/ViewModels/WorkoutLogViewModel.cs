@@ -96,6 +96,8 @@ public partial class WorkoutLogViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectWorkoutAsync(Workout? workout)
     {
+        System.Diagnostics.Debug.WriteLine($"SelectWorkout fired. workout is null: {workout is null}");
+
         if (workout is null)
             return;
 

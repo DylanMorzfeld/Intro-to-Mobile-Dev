@@ -20,17 +20,21 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Workout">
                         <SwipeView>
-                            <!-- Swiping RIGHT reveals these (LeftItems) - toggles completion status. -->
+                            <!-- Swiping RIGHT reveals these (LeftItems): mark complete or edit details. -->
                             <SwipeView.LeftItems>
                                 <SwipeItems>
                                     <SwipeItem Text="{Binding IsCompleted, Converter={StaticResource CompleteSwipeTextConverter}}"
                                                BackgroundColor="MediumSeaGreen"
                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=ToggleCompleteCommand}"
                                                CommandParameter="{Binding .}" />
+                                    <SwipeItem Text="Edit"
+                                               BackgroundColor="SteelBlue"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=SelectWorkoutCommand}"
+                                               CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.LeftItems>
 
-                            <!-- Swiping LEFT reveals these (RightItems) - deletes the workout. -->
+                            <!-- Swiping LEFT reveals these (RightItems): delete the workout. -->
                             <SwipeView.RightItems>
                                 <SwipeItems>
                                     <SwipeItem Text="Delete"
@@ -42,21 +46,10 @@
 
                             <!-- BackgroundColor and the ActivityType label's Opacity both derive
                                  from the same IsCompleted flag via one shared converter
-                                 (CompletionStyleConverter), distinguished by ConverterParameter -
-                                 avoids needing a separate converter class per visual property. -->
+                                 (CompletionStyleConverter), distinguished by ConverterParameter. -->
                             <Grid Padding="16,12"
                                   ColumnDefinitions="Auto,*,Auto"
                                   BackgroundColor="{Binding IsCompleted, Converter={StaticResource CompletionStyleConverter}, ConverterParameter=Background}">
-
-                                <!-- Tapping anywhere on the row (outside the swipe area) navigates
-                                     to WorkoutDetailPage in "edit" mode via SelectWorkoutCommand,
-                                     which lives on WorkoutLogViewModel (not this row's own
-                                     Workout DataContext) - hence the RelativeSource binding. -->
-                                <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=SelectWorkoutCommand}"
-                                        CommandParameter="{Binding .}" />
-                                </Grid.GestureRecognizers>
 
                                 <Label Grid.Column="0"
                                        Text="{Binding ActivityType}"

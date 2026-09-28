@@ -1,4 +1,5 @@
-﻿using FitTrack.Services.Interfaces;
+﻿using CommunityToolkit.Maui;
+using FitTrack.Services.Interfaces;
 using FitTrack.Services.Local;
 using FitTrack.ViewModels;
 using FitTrack.Views;
@@ -13,6 +14,7 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
