@@ -1,56 +1,111 @@
 # 💪 FitTrack — Personal Fitness Tracker
 
-A .NET MAUI app for tracking workouts, meals, and fitness goals — built with the MVVM pattern for Intro to Mobile Development.
+A .NET MAUI app for tracking workouts, meals, and fitness goals, built with the MVVM pattern for Intro to Mobile Development.
 
 ---
 
 ## 📱 What It Does
 
-FitTrack has three main screens:
-
 | Screen | What you can do |
 |---|---|
-| **Workout Log** | Log workouts (type, duration, intensity, calories). Edit or delete any entry. |
-| **Diet Tracker** | Log meals with calories, protein, carbs, and fat. See your daily total vs. your calorie goal. |
-| **Goals** | Set a fitness goal (weight loss, muscle gain, endurance) and watch a progress bar fill in as you update it. Hit your goal and get a little celebration message. 🏆 |
+| **Workout Log** | Log workouts (type, duration, intensity, calories). Swipe right to mark one complete or edit it. Swipe left to delete. |
+| **Diet Tracker** | Log meals with calories, protein, carbs, and fat. Tap a meal to expand its nutrition detail. Swipe right to edit, left to delete. See your daily total against a calorie goal. |
+| **Goals** | Set weight loss, muscle gain, or endurance goals. The progress bar changes color as you get closer, and hitting a goal shows a celebration message. A Recent Activity card shows what you've been doing. |
 
 ---
 
 ## 🏗️ How It's Built (MVVM)
 
-The app is split into four clear layers, so each piece only does one job:
-
-- **Models** — plain data (`Workout`, `Meal`, `FitnessGoal`). No app logic, just the data itself.
-- **Services** — handles saving/loading data. Currently uses a local SQLite database, but it's built so a real backend API could be swapped in later without changing anything else in the app.
-- **ViewModels** — the "brains" of each screen. Holds the data the screen needs and the actions the user can take (like Save or Delete). Has zero knowledge of what the screen actually looks like.
-- **Views** — the actual screens (XAML). Just displays data and forwards user taps to the ViewModel — no logic lives here.
-
-**Why split it this way?** If I want to change how data is stored (say, move from local storage to a real server), I only touch the Services layer. Nothing in the ViewModels or Views has to change. Same idea if I want to redesign a screen — I only touch the View.
+- **Models**: plain data (`Workout`, `Meal`, `FitnessGoal`).
+- **Services**: save and load data behind interfaces (`IWorkoutRepository`, `IDietRepository`, `IGoalRepository`). Today they use local SQLite, but a real backend could replace them without touching the rest of the app.
+- **ViewModels**: the logic for each screen, using CommunityToolkit.Mvvm for properties and commands.
+- **Views**: XAML pages that only bind to their ViewModel.
+- **Converters**: display-only logic, like turning goal numbers into a progress value or color.
 
 ---
 
-## 🧭 Getting Around the App
+## ✋ Gestures
 
-Three tabs at the bottom: **Workouts**, **Diet**, **Goals**. Tapping "+" on any tab opens a form to add a new entry; tapping an existing entry opens that same form pre-filled so you can edit it.
+- **Swipe right on a workout** to mark it complete (or undo) or edit it.
+- **Tap a meal** to expand or collapse its protein, carbs, and fat.
+- **Swipe left** on any item to delete it, with a confirmation dialog.
 
 ---
 
-## 💾 Where the Data Lives
+## 📣 Custom Events
 
-Everything is saved locally on the device using SQLite, so your data sticks around between app launches.
+The app uses `WeakReferenceMessenger` so ViewModels can announce things without knowing who is listening:
+
+- `WorkoutLoggedMessage` is sent when a workout is completed, reopened, or opened for editing.
+- `NutritionalDetailsRequestedMessage` is sent when a meal's nutrition detail is expanded.
+
+An `ActivityFeedService` listens for both and feeds the Recent Activity card on the Goals page.
+
+---
+
+## 🎨 Resources
+
+- **Static resources**: one color palette in `Colors.xaml` (`ActionColor`, `DangerColor`, `SuccessColor`) is used for buttons and swipe actions across all three pages.
+- **Dynamic, progress-based visuals**: goal progress bars turn red, orange, or green depending on how close the goal is to completion. The colors are looked up from the app's resource dictionary at runtime.
+
+---
+
+## 🧭 Navigation
+
+Three tabs (**Workouts**, **Diet**, **Goals**) built on .NET MAUI Shell. Detail pages open with `Shell.Current.GoToAsync`, passing an Id to edit an existing entry.
+
+---
+
+## 💾 Data
+
+Saved locally with SQLite (`sqlite-net-pcl`), so data persists between launches.
 
 ---
 
 ## 🔮 What's Next
 
-- Actual reminders for recurring workouts (right now it just remembers you marked one as recurring)
-- Real backend/API support instead of local-only storage
-- Swipe gestures and other interactive touches (Project 2)
+- Real reminders for recurring workouts (currently just a stored flag)
+- Backend/API support instead of local-only storage
 
 ---
 
 ## 🛠️ Built With
 
-- .NET MAUI
-- CommunityToolkit.Mvvm
-- SQLite (sqlite-net-pcl)
+.NET MAUI · CommunityToolkit.Mvvm · SQLite (sqlite-net-pcl)
+
+---
+
+## 🌐 Semester API (Part 1): FitTrack.Api
+
+An ASP.NET Core Web API (.NET 10) that will become the back end for the FitTrack MAUI app. Part 1 stores data in a JSON file. Primary resource: **workouts**.
+
+### Endpoints
+
+| Method | URL | What it does | Success | Failure |
+|---|---|---|---|---|
+| GET | `/api/workouts` | List all workouts. Optional filter: `?type=Running` | 200 | none |
+| GET | `/api/workouts/{id}` | Get one workout by id | 200 | 404 |
+| POST | `/api/workouts` | Create a workout | 201 + `Location` header | 400, 409 |
+| PUT | `/api/workouts/{id}` | Replace an existing workout | 204 | 400, 404, 409 |
+| DELETE | `/api/workouts/{id}` | Delete a workout | 204 | 404 |
+
+### Fields
+
+| Field | Who sets it | Notes |
+|---|---|---|
+| `date` | Client | Date of the workout |
+| `type` | Client | Activity type, e.g. Running, Walking, Cycling, WeightLifting, Swimming, Yoga, HIIT, Other |
+| `durationMinutes` | Client | Must be greater than 0 |
+| `caloriesBurned` | Client | Cannot be negative |
+| `intensity` | Client | Low, Moderate, or High |
+| `notes` | Client | Optional |
+| `id` | **Server** | Assigned by the repository |
+| `createdUtc` | **Server** | Set when the workout is created |
+
+### Business rule
+
+Only one workout of the same `type` is allowed per day. Creating or updating a workout that would break this returns **409 Conflict**. When updating, the workout being edited is not counted as its own duplicate.
+
+### Error format
+
+Errors use the standard ASP.NET Core problem-details format (`application/problem+json`).
