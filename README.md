@@ -72,3 +72,40 @@ Saved locally with SQLite (`sqlite-net-pcl`), so data persists between launches.
 ## 🛠️ Built With
 
 .NET MAUI · CommunityToolkit.Mvvm · SQLite (sqlite-net-pcl)
+
+---
+
+## 🌐 Semester API (Part 1): FitTrack.Api
+
+An ASP.NET Core Web API (.NET 10) that will become the back end for the FitTrack MAUI app. Part 1 stores data in a JSON file. Primary resource: **workouts**.
+
+### Endpoints
+
+| Method | URL | What it does | Success | Failure |
+|---|---|---|---|---|
+| GET | `/api/workouts` | List all workouts. Optional filter: `?type=Running` | 200 | none |
+| GET | `/api/workouts/{id}` | Get one workout by id | 200 | 404 |
+| POST | `/api/workouts` | Create a workout | 201 + `Location` header | 400, 409 |
+| PUT | `/api/workouts/{id}` | Replace an existing workout | 204 | 400, 404, 409 |
+| DELETE | `/api/workouts/{id}` | Delete a workout | 204 | 404 |
+
+### Fields
+
+| Field | Who sets it | Notes |
+|---|---|---|
+| `date` | Client | Date of the workout |
+| `type` | Client | Activity type, e.g. Running, Walking, Cycling, WeightLifting, Swimming, Yoga, HIIT, Other |
+| `durationMinutes` | Client | Must be greater than 0 |
+| `caloriesBurned` | Client | Cannot be negative |
+| `intensity` | Client | Low, Moderate, or High |
+| `notes` | Client | Optional |
+| `id` | **Server** | Assigned by the repository |
+| `createdUtc` | **Server** | Set when the workout is created |
+
+### Business rule
+
+Only one workout of the same `type` is allowed per day. Creating or updating a workout that would break this returns **409 Conflict**. When updating, the workout being edited is not counted as its own duplicate.
+
+### Error format
+
+Errors use the standard ASP.NET Core problem-details format (`application/problem+json`).
