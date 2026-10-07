@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitTrack.ViewModels"
              xmlns:models="clr-namespace:FitTrack.Models"
+             xmlns:views="clr-namespace:FitTrack.Views"
              x:Class="FitTrack.Views.WorkoutLogPage"
              x:DataType="vm:WorkoutLogViewModel"
              Title="Workout Log">
@@ -24,12 +25,12 @@
                             <SwipeView.LeftItems>
                                 <SwipeItems>
                                     <SwipeItem Text="{Binding IsCompleted, Converter={StaticResource CompleteSwipeTextConverter}}"
-                                               BackgroundColor="MediumSeaGreen"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=ToggleCompleteCommand}"
+                                               BackgroundColor="{StaticResource SuccessColor}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type views:WorkoutLogPage}}, Path=BindingContext.ToggleCompleteCommand}"
                                                CommandParameter="{Binding .}" />
                                     <SwipeItem Text="Edit"
-                                               BackgroundColor="SteelBlue"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=SelectWorkoutCommand}"
+                                               BackgroundColor="{StaticResource ActionColor}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type views:WorkoutLogPage}}, Path=BindingContext.SelectWorkoutCommand}"
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.LeftItems>
@@ -38,8 +39,8 @@
                             <SwipeView.RightItems>
                                 <SwipeItems>
                                     <SwipeItem Text="Delete"
-                                               BackgroundColor="IndianRed"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:WorkoutLogViewModel}}, Path=DeleteWorkoutCommand}"
+                                               BackgroundColor="{StaticResource DangerColor}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type views:WorkoutLogPage}}, Path=BindingContext.DeleteWorkoutCommand}"
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.RightItems>

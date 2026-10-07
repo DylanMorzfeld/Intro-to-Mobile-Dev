@@ -17,6 +17,7 @@
             <converters:GoalCompletedConverter x:Key="GoalCompletedConverter" />
             <converters:CompleteSwipeTextConverter x:Key="CompleteSwipeTextConverter" />
             <converters:CompletionStyleConverter x:Key="CompletionStyleConverter" />
+            <converters:GoalProgressColorConverter x:Key="GoalProgressColorConverter" />
             
         </ResourceDictionary>
     </Application.Resources>

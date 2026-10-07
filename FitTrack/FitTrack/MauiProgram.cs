@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Mvvm.Messaging;
+using FitTrack.Services;
 using FitTrack.Services.Interfaces;
 using FitTrack.Services.Local;
 using FitTrack.ViewModels;
@@ -12,6 +14,26 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
+        // DIAGNOSTIC ONLY: logs the FULL exception (type, message, stack trace) to the
+        // Output window. Android often wraps the real .NET exception in a
+        // JavaProxyThrowable, which hides the details in the debugger dialog.
+        // Remove before final submission once the app is stable.
+        AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine("========== UNHANDLED EXCEPTION ==========");
+            System.Diagnostics.Debug.WriteLine(args.ExceptionObject?.ToString() ?? "null exception object");
+            System.Diagnostics.Debug.WriteLine("==========================================");
+        };
+
+        TaskScheduler.UnobservedTaskException += (sender, args) =>
+        {
+            System.Diagnostics.Debug.WriteLine("========== UNOBSERVED TASK EXCEPTION ==========");
+            System.Diagnostics.Debug.WriteLine(args.Exception.ToString());
+            System.Diagnostics.Debug.WriteLine("================================================");
+            args.SetObserved();
+        };
+
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
@@ -47,12 +69,18 @@ public static class MauiProgram
         builder.Services.AddTransient<GoalDetailViewModel>();
         builder.Services.AddTransient<GoalsProgressPage>();
         builder.Services.AddTransient<GoalDetailPage>();
-
+        builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+        builder.Services.AddSingleton<ActivityFeedService>();
 
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+
+        // Resolve once so the activity feed starts listening at launch.
+        app.Services.GetRequiredService<ActivityFeedService>();
+
+        return app;
     }
 }

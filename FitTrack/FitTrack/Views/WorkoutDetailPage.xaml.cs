@@ -6,7 +6,7 @@ public partial class WorkoutDetailPage : ContentPage
 {
     public WorkoutDetailPage(WorkoutDetailViewModel viewModel)
     {
-        InitializeComponent();
         BindingContext = viewModel;
+        InitializeComponent();
     }
 }

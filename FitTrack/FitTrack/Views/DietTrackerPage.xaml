@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitTrack.ViewModels"
              xmlns:models="clr-namespace:FitTrack.Models"
+             xmlns:views="clr-namespace:FitTrack.Views"
              x:Class="FitTrack.Views.DietTrackerPage"
              x:DataType="vm:DietViewModel"
              Title="Diet Tracker">
@@ -48,40 +49,63 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Meal">
                         <SwipeView>
+                            <!-- Swiping RIGHT reveals these (LeftItems): edit the meal. -->
+                            <SwipeView.LeftItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Edit"
+                                               BackgroundColor="{StaticResource ActionColor}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type views:DietTrackerPage}}, Path=BindingContext.SelectMealCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.LeftItems>
+
+                            <!-- Swiping LEFT reveals these (RightItems): delete the meal. -->
                             <SwipeView.RightItems>
                                 <SwipeItems>
                                     <SwipeItem Text="Delete"
-                                               BackgroundColor="IndianRed"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DietViewModel}}, Path=DeleteMealCommand}"
+                                               BackgroundColor="{StaticResource DangerColor}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type views:DietTrackerPage}}, Path=BindingContext.DeleteMealCommand}"
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.RightItems>
 
-                            <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto">
-                                <Grid.GestureRecognizers>
+                            <!-- Tapping the row expands/collapses its nutrition detail. -->
+                            <VerticalStackLayout>
+                                <VerticalStackLayout.GestureRecognizers>
                                     <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DietViewModel}}, Path=SelectMealCommand}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type views:DietTrackerPage}}, Path=BindingContext.ToggleMealDetailsCommand}"
                                         CommandParameter="{Binding .}" />
-                                </Grid.GestureRecognizers>
+                                </VerticalStackLayout.GestureRecognizers>
 
-                                <Label Grid.Column="0"
-                                       Text="{Binding MealType}"
-                                       FontAttributes="Bold"
-                                       VerticalOptions="Center"
-                                       WidthRequest="90" />
+                                <Grid Padding="16,12" ColumnDefinitions="Auto,*,Auto">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding MealType}"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center"
+                                           WidthRequest="90" />
 
-                                <VerticalStackLayout Grid.Column="1" Margin="12,0" VerticalOptions="Center">
-                                    <Label Text="{Binding Name}" FontSize="14" />
-                                    <Label Text="{Binding DateLogged, StringFormat='{0:h:mm tt}'}"
-                                           FontSize="12"
-                                           TextColor="Gray" />
-                                </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Margin="12,0" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" FontSize="14" />
+                                        <Label Text="{Binding DateLogged, StringFormat='{0:h:mm tt}'}"
+                                               FontSize="12"
+                                               TextColor="Gray" />
+                                    </VerticalStackLayout>
 
-                                <Label Grid.Column="2"
-                                       Text="{Binding Calories, StringFormat='{0} cal'}"
-                                       VerticalOptions="Center"
-                                       FontAttributes="Bold" />
-                            </Grid>
+                                    <Label Grid.Column="2"
+                                           Text="{Binding Calories, StringFormat='{0} cal'}"
+                                           VerticalOptions="Center"
+                                           FontAttributes="Bold" />
+                                </Grid>
+
+                                <!-- Detail panel: only visible while the meal is expanded. -->
+                                <HorizontalStackLayout IsVisible="{Binding IsExpanded}"
+                                                       Padding="16,0,16,12"
+                                                       Spacing="20">
+                                    <Label Text="{Binding Protein, StringFormat='Protein: {0:F0}g'}" FontSize="12" />
+                                    <Label Text="{Binding Carbs, StringFormat='Carbs: {0:F0}g'}" FontSize="12" />
+                                    <Label Text="{Binding Fat, StringFormat='Fat: {0:F0}g'}" FontSize="12" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
                         </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>

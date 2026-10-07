@@ -44,4 +44,11 @@ public class Meal
 
     /// <summary>The date/time this meal was logged.</summary>
     public DateTime DateLogged { get; set; } = DateTime.Now;
+
+    /// <summary>
+    /// UI-only state: whether this meal's nutrition detail is currently expanded.
+    /// [Ignore] keeps it out of the SQLite table, since it's never persisted.
+    /// </summary>
+    [Ignore]
+    public bool IsExpanded { get; set; }
 }

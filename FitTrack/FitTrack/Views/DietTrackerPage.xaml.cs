@@ -8,9 +8,9 @@ public partial class DietTrackerPage : ContentPage
 
     public DietTrackerPage(DietViewModel viewModel)
     {
-        InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+        InitializeComponent();
     }
 
     protected override async void OnAppearing()

@@ -431,4 +431,21 @@
         <Setter Property="SelectedTabColor" Value="{AppThemeBinding Light={StaticResource Gray950}, Dark={StaticResource Gray200}}" />
     </Style>
 
+    <!-- App-specific semantic colors, used consistently across all three pages
+     instead of scattering named colors (SteelBlue, IndianRed, etc.) through
+     individual XAML files. This is the "static resources" piece of Project 2:
+     one definition, reused everywhere, so the whole app reads as one
+     cohesive design rather than three separately-styled screens. -->
+    <Color x:Key="ActionColor">#3F6FD1</Color>
+    <!-- Edit swipe, primary buttons -->
+    <Color x:Key="DangerColor">#D1495B</Color>
+    <!-- Delete swipe -->
+    <Color x:Key="SuccessColor">#2E933C</Color>
+    <!-- Complete swipe, achieved goals -->
+
+    <!-- Used by GoalProgressColorConverter for the dynamic progress-bar coloring. -->
+    <Color x:Key="GoalProgressLow">#D1495B</Color>
+    <Color x:Key="GoalProgressMid">#E8A33D</Color>
+    <Color x:Key="GoalProgressHigh">#2E933C</Color>
+
 </ResourceDictionary>

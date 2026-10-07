@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="FitTrack.csproj" />
+  <Project Path="FitTrack.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
 </Solution>

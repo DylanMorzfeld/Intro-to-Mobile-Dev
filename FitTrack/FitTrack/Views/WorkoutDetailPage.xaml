@@ -52,6 +52,7 @@
 
                 <Button Grid.Column="1"
                         Text="Save"
+                        BackgroundColor="{StaticResource ActionColor}"
                         Command="{Binding SaveCommand}" />
             </Grid>
 

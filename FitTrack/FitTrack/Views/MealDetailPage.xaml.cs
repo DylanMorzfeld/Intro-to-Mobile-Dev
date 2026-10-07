@@ -6,7 +6,7 @@ public partial class MealDetailPage : ContentPage
 {
     public MealDetailPage(MealDetailViewModel viewModel)
     {
-        InitializeComponent();
         BindingContext = viewModel;
+        InitializeComponent();
     }
 }

@@ -8,9 +8,12 @@ public partial class GoalsProgressPage : ContentPage
 
     public GoalsProgressPage(GoalsViewModel viewModel)
     {
-        InitializeComponent();
+        // Set the BindingContext before InitializeComponent so compiled/typed XAML
+        // bindings that use AncestorType or the page's ViewModel won't be invoked
+        // with a null source during component initialization.
         _viewModel = viewModel;
         BindingContext = _viewModel;
+        InitializeComponent();
     }
 
     protected override async void OnAppearing()

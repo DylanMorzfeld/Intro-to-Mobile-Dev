@@ -6,7 +6,7 @@ public partial class GoalDetailPage : ContentPage
 {
     public GoalDetailPage(GoalDetailViewModel viewModel)
     {
-        InitializeComponent();
         BindingContext = viewModel;
+        InitializeComponent();
     }
 }

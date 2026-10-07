@@ -12,9 +12,12 @@ public partial class WorkoutLogPage : ContentPage
     // to its ViewModel.
     public WorkoutLogPage(WorkoutLogViewModel viewModel)
     {
-        InitializeComponent();
+        // Ensure the BindingContext is set before InitializeComponent runs so
+        // compiled/typed bindings (generated from XAML) receive a non-null
+        // source when evaluated during component initialization.
         _viewModel = viewModel;
         BindingContext = _viewModel;
+        InitializeComponent();
     }
 
     protected override async void OnAppearing()

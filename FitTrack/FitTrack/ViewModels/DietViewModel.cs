@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using FitTrack.Messages;
 using FitTrack.Models;
 using FitTrack.Services.Interfaces;
 using System.Collections.ObjectModel;
@@ -48,9 +50,12 @@ public partial class DietViewModel : ObservableObject
     [ObservableProperty]
     private int calorieGoal = 2000;
 
-    public DietViewModel(IDietRepository dietRepository)
+    private readonly IMessenger _messenger;
+
+    public DietViewModel(IDietRepository dietRepository, IMessenger messenger)
     {
         _dietRepository = dietRepository;
+        _messenger = messenger;
     }
 
     [RelayCommand]
@@ -133,5 +138,25 @@ public partial class DietViewModel : ObservableObject
         TotalProtein = Meals.Sum(m => m.Protein);
         TotalCarbs = Meals.Sum(m => m.Carbs);
         TotalFat = Meals.Sum(m => m.Fat);
+    }
+
+    /// <summary>
+    /// Expands or collapses a meal's detailed nutrition breakdown when the row is tapped.
+    /// Replacing the item in the collection forces the CollectionView to re-render that
+    /// row, the same pattern ToggleCompleteAsync uses on the Workout Log.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleMealDetails(Meal? meal)
+    {
+        if (meal is null)
+            return;
+
+        meal.IsExpanded = !meal.IsExpanded;
+
+        _messenger.Send(new NutritionalDetailsRequestedMessage(meal, meal.IsExpanded));
+
+        var index = Meals.IndexOf(meal);
+        if (index >= 0)
+            Meals[index] = meal;
     }
 }

@@ -1,10 +1,10 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using FitTrack.Messages;
 using FitTrack.Models;
 using FitTrack.Services.Interfaces;
-using FitTrack.Models;
-using FitTrack.Services.Interfaces;
-using System.Collections.ObjectModel;
 
 namespace FitTrack.ViewModels;
 
@@ -19,6 +19,7 @@ namespace FitTrack.ViewModels;
 public partial class WorkoutLogViewModel : ObservableObject
 {
     private readonly IWorkoutRepository _workoutRepository;
+    private readonly IMessenger _messenger;
 
     /// <summary>
     /// The list shown in the CollectionView. ObservableCollection
@@ -39,9 +40,10 @@ public partial class WorkoutLogViewModel : ObservableObject
     // Constructor injection: MauiProgram.cs hands this class a shared
     // IWorkoutRepository automatically. This ViewModel never has to know
     // (or care) whether that repository talks to SQLite or a remote API.
-    public WorkoutLogViewModel(IWorkoutRepository workoutRepository)
+    public WorkoutLogViewModel(IWorkoutRepository workoutRepository, IMessenger messenger)
     {
         _workoutRepository = workoutRepository;
+        _messenger = messenger;
     }
 
     /// <summary>
@@ -69,7 +71,8 @@ public partial class WorkoutLogViewModel : ObservableObject
         {
             // TODO (later milestone): surface this via a dialog/toast
             // service instead of just writing to the debug console.
-            System.Diagnostics.Debug.WriteLine($"Failed to load workouts: {ex.Message}");
+            // Logs {ex} (not ex.Message) so the full stack trace is captured.
+            System.Diagnostics.Debug.WriteLine($"Failed to load workouts: {ex}");
         }
         finally
         {
@@ -96,15 +99,15 @@ public partial class WorkoutLogViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectWorkoutAsync(Workout? workout)
     {
-        System.Diagnostics.Debug.WriteLine($"SelectWorkout fired. workout is null: {workout is null}");
-
         if (workout is null)
             return;
 
+        _messenger.Send(new WorkoutLoggedMessage(workout, WorkoutLogAction.EditRequested));
+
         var navigationParameter = new Dictionary<string, object>
-    {
-        { "WorkoutId", workout.Id }
-    };
+        {
+            { "WorkoutId", workout.Id }
+        };
 
         await Shell.Current.GoToAsync(nameof(Views.WorkoutDetailPage), navigationParameter);
     }
@@ -135,7 +138,7 @@ public partial class WorkoutLogViewModel : ObservableObject
     /// <summary>
     /// Toggles a workout's completed status, triggered by the right-swipe
     /// "Complete" gesture. Persists immediately so the change survives an
-    /// app restart, then refreshes the in-memory list item so the UI updates.
+    /// app restart, then reloads the list so every row redraws with the saved state.
     /// </summary>
     [RelayCommand]
     private async Task ToggleCompleteAsync(Workout? workout)
@@ -146,13 +149,11 @@ public partial class WorkoutLogViewModel : ObservableObject
         workout.IsCompleted = !workout.IsCompleted;
         await _workoutRepository.SaveAsync(workout);
 
-        // Replacing the item (rather than just mutating it in place) forces
-        // the CollectionView to re-render this row, since Workout isn't an
-        // ObservableObject itself and won't raise PropertyChanged on its own.
-        var index = Workouts.IndexOf(workout);
-        if (index >= 0)
-        {
-            Workouts[index] = workout;
-        }
+        _messenger.Send(new WorkoutLoggedMessage(
+            workout,
+            workout.IsCompleted ? WorkoutLogAction.Completed : WorkoutLogAction.Reopened));
+
+        // Reload from the database so every row redraws with the saved state.
+        await LoadWorkoutsAsync();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FitTrack.Models;
+using FitTrack.Services;
 using FitTrack.Services.Interfaces;
 using System.Collections.ObjectModel;
 
@@ -22,9 +23,15 @@ public partial class GoalsViewModel : ObservableObject
     [ObservableProperty]
     private bool isRefreshing;
 
-    public GoalsViewModel(IGoalRepository goalRepository)
+    private readonly ActivityFeedService _activityFeed;
+
+    /// <summary>Recent activity captured from the app's custom events.</summary>
+    public ObservableCollection<string> RecentActivity => _activityFeed.RecentActivity;
+
+    public GoalsViewModel(IGoalRepository goalRepository, ActivityFeedService activityFeed)
     {
         _goalRepository = goalRepository;
+        _activityFeed = activityFeed;
     }
 
     [RelayCommand]

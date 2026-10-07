@@ -3,13 +3,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:FitTrack.ViewModels"
              xmlns:models="clr-namespace:FitTrack.Models"
+             xmlns:views="clr-namespace:FitTrack.Views"
              x:Class="FitTrack.Views.GoalsProgressPage"
              x:DataType="vm:GoalsViewModel"
              Title="Goals">
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto">
 
-        <RefreshView Grid.Row="0"
+        <!-- Recent activity, fed by the app's custom events (WorkoutLoggedMessage and
+             NutritionalDetailsRequestedMessage) via ActivityFeedService. -->
+        <Border Grid.Row="0" Margin="12,12,12,4" Padding="14" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Recent Activity" FontAttributes="Bold" FontSize="16" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentActivity}" Spacing="2">
+                    <BindableLayout.EmptyView>
+                        <Label Text="Complete a workout or view a meal's nutrition to see activity here."
+                               FontSize="12"
+                               TextColor="Gray" />
+                    </BindableLayout.EmptyView>
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Label Text="{Binding .}" FontSize="12" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+
+        <RefreshView Grid.Row="1"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding LoadGoalsCommand}">
 
@@ -23,8 +44,8 @@
                             <SwipeView.RightItems>
                                 <SwipeItems>
                                     <SwipeItem Text="Delete"
-                                               BackgroundColor="IndianRed"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GoalsViewModel}}, Path=DeleteGoalCommand}"
+                                               BackgroundColor="{StaticResource DangerColor}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type views:GoalsProgressPage}}, Path=BindingContext.DeleteGoalCommand}"
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.RightItems>
@@ -33,18 +54,18 @@
                                 <VerticalStackLayout Spacing="8">
                                     <VerticalStackLayout.GestureRecognizers>
                                         <TapGestureRecognizer
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:GoalsViewModel}}, Path=SelectGoalCommand}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type views:GoalsProgressPage}}, Path=BindingContext.SelectGoalCommand}"
                                             CommandParameter="{Binding .}" />
                                     </VerticalStackLayout.GestureRecognizers>
 
                                     <Label Text="{Binding Description}" FontAttributes="Bold" FontSize="16" />
-                    
                                     <Label Text="{Binding GoalType}" FontSize="12" TextColor="Gray" />
 
-                                    <ProgressBar Progress="{Binding ., Converter={StaticResource GoalProgressConverter}}" />
+                                    <ProgressBar Progress="{Binding ., Converter={StaticResource GoalProgressConverter}}"
+                                                 ProgressColor="{Binding ., Converter={StaticResource GoalProgressColorConverter}}" />
 
                                     <Label Text="🏆 Goal achieved! Great work."
-                                           TextColor="Green"
+                                           TextColor="{StaticResource SuccessColor}"
                                            FontAttributes="Bold"
                                            FontSize="13"
                                            IsVisible="{Binding ., Converter={StaticResource GoalCompletedConverter}}" />
@@ -68,7 +89,7 @@
             </CollectionView>
         </RefreshView>
 
-        <Button Grid.Row="1"
+        <Button Grid.Row="2"
                 Text="+ Set New Goal"
                 Command="{Binding AddGoalCommand}"
                 Margin="16"
