@@ -1,0 +1,94 @@
+@host = https://localhost:7059
+
+### 1. Create a workout (expect 201, a Location header, and id/createdUtc set by the server)
+POST {{host}}/api/workouts
+Content-Type: application/json
+
+{
+  "date": "2026-10-09",
+  "type": "Running",
+  "durationMinutes": 30,
+  "caloriesBurned": 300,
+  "intensity": "Moderate",
+  "notes": "Morning run"
+}
+
+### 2. Same type on the same date (expect 409 Conflict)
+POST {{host}}/api/workouts
+Content-Type: application/json
+
+{
+  "date": "2026-10-09",
+  "type": "Running",
+  "durationMinutes": 20,
+  "caloriesBurned": 200,
+  "intensity": "Low"
+}
+
+### 3. Validation failure (expect 400, error key "durationMinutes")
+POST {{host}}/api/workouts
+Content-Type: application/json
+
+{
+  "date": "2026-10-10",
+  "type": "Running",
+  "durationMinutes": 0,
+  "caloriesBurned": 200,
+  "intensity": "Low"
+}
+
+### 4. Over-posting: id and createdUtc from the client must be ignored (expect 201, id is NOT 999)
+POST {{host}}/api/workouts
+Content-Type: application/json
+
+{
+  "id": 999,
+  "createdUtc": "2000-01-01T00:00:00Z",
+  "date": "2026-10-11",
+  "type": "Yoga",
+  "durationMinutes": 45,
+  "caloriesBurned": 150,
+  "intensity": "Low"
+}
+
+### 5. List all (expect 200)
+GET {{host}}/api/workouts
+
+### 6. Filter by type (expect 200, only Running)
+GET {{host}}/api/workouts?type=Running
+
+### 7. Get one (expect 200)
+GET {{host}}/api/workouts/1
+
+### 8. Get one that does not exist (expect 404)
+GET {{host}}/api/workouts/999
+
+### 9. Replace workout 1 (expect 204)
+PUT {{host}}/api/workouts/1
+Content-Type: application/json
+
+{
+  "date": "2026-10-09",
+  "type": "Running",
+  "durationMinutes": 35,
+  "caloriesBurned": 350,
+  "intensity": "High"
+}
+
+### 10. Replace one that does not exist (expect 404)
+PUT {{host}}/api/workouts/999
+Content-Type: application/json
+
+{
+  "date": "2026-10-09",
+  "type": "Running",
+  "durationMinutes": 35,
+  "caloriesBurned": 350,
+  "intensity": "High"
+}
+
+### 11. Delete (expect 204)
+DELETE {{host}}/api/workouts/1
+
+### 12. Delete again (expect 404)
+DELETE {{host}}/api/workouts/1

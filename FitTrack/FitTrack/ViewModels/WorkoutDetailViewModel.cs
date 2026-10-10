@@ -14,6 +14,7 @@ namespace FitTrack.ViewModels;
 public partial class WorkoutDetailViewModel : ObservableObject
 {
     private readonly IWorkoutRepository _workoutRepository;
+    private readonly IAppNavigator _navigator;
 
     // Tracks the actual Workout object being edited/created behind the
     // scenes. The individual [ObservableProperty] fields below are what
@@ -53,9 +54,10 @@ public partial class WorkoutDetailViewModel : ObservableObject
     public List<ActivityType> ActivityTypes { get; } = Enum.GetValues<ActivityType>().ToList();
     public List<IntensityLevel> IntensityLevels { get; } = Enum.GetValues<IntensityLevel>().ToList();
 
-    public WorkoutDetailViewModel(IWorkoutRepository workoutRepository)
+    public WorkoutDetailViewModel(IWorkoutRepository workoutRepository, IAppNavigator navigator)
     {
         _workoutRepository = workoutRepository;
+        _navigator = navigator;
     }
 
     /// <summary>
@@ -64,27 +66,39 @@ public partial class WorkoutDetailViewModel : ObservableObject
     /// above). A value of 0 means "new workout"; anything else means
     /// "load and edit this existing workout".
     /// </summary>
-    async partial void OnWorkoutIdChanged(int value)
+    partial void OnWorkoutIdChanged(int value) => _ = LoadWorkoutAsync(value);
+
+    // Not async void: any failure is caught here and shown on the form instead of
+    // vanishing into the process-wide unhandled-exception event.
+    private async Task LoadWorkoutAsync(int id)
     {
-        if (value == 0)
+        if (id == 0)
         {
             PageTitle = "Log Workout";
             return;
         }
 
-        var existing = await _workoutRepository.GetByIdAsync(value);
-        if (existing is null)
-            return;
+        try
+        {
+            var existing = await _workoutRepository.GetByIdAsync(id);
+            if (existing is null)
+                return;
 
-        _workout = existing;
-        PageTitle = "Edit Workout";
-        SelectedActivityType = existing.ActivityType;
-        SelectedIntensity = existing.Intensity;
-        DurationMinutes = existing.DurationMinutes;
-        CaloriesBurned = existing.CaloriesBurned;
-        DateLogged = existing.DateLogged;
-        Notes = existing.Notes;
-        IsRecurring = existing.IsRecurring;
+            _workout = existing;
+            PageTitle = "Edit Workout";
+            SelectedActivityType = existing.ActivityType;
+            SelectedIntensity = existing.Intensity;
+            DurationMinutes = existing.DurationMinutes;
+            CaloriesBurned = existing.CaloriesBurned;
+            DateLogged = existing.DateLogged;
+            Notes = existing.Notes;
+            IsRecurring = existing.IsRecurring;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load workout: {ex}");
+            ValidationMessage = "Couldn't load that workout.";
+        }
     }
 
     [ObservableProperty]
@@ -116,12 +130,12 @@ public partial class WorkoutDetailViewModel : ObservableObject
         _workout.IsRecurring = IsRecurring;
 
         await _workoutRepository.SaveAsync(_workout);
-        await Shell.Current.GoToAsync("..");
+        await _navigator.GoBackAsync();
     }
 
     [RelayCommand]
     private async Task CancelAsync()
     {
-        await Shell.Current.GoToAsync("..");
+        await _navigator.GoBackAsync();
     }
 }

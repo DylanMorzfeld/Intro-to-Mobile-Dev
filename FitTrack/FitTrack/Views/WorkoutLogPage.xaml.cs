@@ -20,11 +20,25 @@ public partial class WorkoutLogPage : ContentPage
         InitializeComponent();
     }
 
-    protected override async void OnAppearing()
+    protected override void OnAppearing()
     {
         base.OnAppearing();
-        // Refresh the list every time the page appears, so it stays in
-        // sync after returning from adding/editing/deleting a workout.
-        await _viewModel.LoadWorkoutsCommand.ExecuteAsync(null);
+        // Fire and forget, but through a wrapper that catches everything, so an
+        // exception can never escape an async void method.
+        _ = LoadSafeAsync();
+    }
+
+    private async Task LoadSafeAsync()
+    {
+        try
+        {
+            // Refreshes every time the page appears so the list stays in sync
+            // after returning from adding, editing, or deleting.
+            await _viewModel.LoadWorkoutsCommand.ExecuteAsync(null);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+        }
     }
 }

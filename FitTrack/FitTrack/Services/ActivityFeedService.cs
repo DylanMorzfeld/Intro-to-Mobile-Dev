@@ -1,16 +1,18 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Messaging;
 using FitTrack.Messages;
+using FitTrack.Services.Interfaces;
 
 namespace FitTrack.Services;
 
 /// <summary>
 /// Subscribes to the app's custom events and keeps a short, in-memory list of
 /// recent activity for display. Registered as a singleton and created at app
-/// startup (see MauiProgram) so it hears events from the moment the app launches,
+/// startup (App takes IActivityFeed in its constructor) so it hears events from the moment the app launches,
 /// not only after a particular page has been opened.
 /// </summary>
 public class ActivityFeedService :
+    IActivityFeed,
     IRecipient<WorkoutLoggedMessage>,
     IRecipient<NutritionalDetailsRequestedMessage>
 {

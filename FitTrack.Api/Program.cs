@@ -1,17 +1,35 @@
+using System.Text.Json.Serialization;
 using FitTrack.Api.Repositories;
+using FitTrack.Api.Services;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services
+    .AddControllers(options =>
+    {
+        // Validation error keys use the JSON names ("durationMinutes"),
+        // not the C# property names ("DurationMinutes").
+        options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider());
+    })
+    .AddJsonOptions(options =>
+    {
+        // Clients send and receive "Running" instead of 0.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+// Repository is a singleton (it owns the file lock); service is scoped per request.
 builder.Services.AddSingleton<IWorkoutRepository, JsonWorkoutRepository>();
+builder.Services.AddScoped<IWorkoutService, WorkoutService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// One place for unexpected errors; returns a problem-details 500.
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

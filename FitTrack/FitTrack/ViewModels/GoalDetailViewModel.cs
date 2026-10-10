@@ -14,6 +14,7 @@ namespace FitTrack.ViewModels;
 public partial class GoalDetailViewModel : ObservableObject
 {
     private readonly IGoalRepository _goalRepository;
+    private readonly IAppNavigator _navigator;
     private FitnessGoal _goal = new();
 
     [ObservableProperty]
@@ -48,33 +49,45 @@ public partial class GoalDetailViewModel : ObservableObject
 
     public List<GoalType> GoalTypes { get; } = Enum.GetValues<GoalType>().ToList();
 
-    public GoalDetailViewModel(IGoalRepository goalRepository)
+    public GoalDetailViewModel(IGoalRepository goalRepository, IAppNavigator navigator)
     {
         _goalRepository = goalRepository;
+        _navigator = navigator;
     }
 
-    async partial void OnGoalIdChanged(int value)
+    partial void OnGoalIdChanged(int value) => _ = LoadGoalAsync(value);
+
+    // Not async void: any failure is caught here and shown on the form.
+    private async Task LoadGoalAsync(int id)
     {
-        if (value == 0)
+        if (id == 0)
         {
             PageTitle = "New Goal";
             return;
         }
 
-        var existing = await _goalRepository.GetByIdAsync(value);
-        if (existing is null)
-            return;
+        try
+        {
+            var existing = await _goalRepository.GetByIdAsync(id);
+            if (existing is null)
+                return;
 
-        _goal = existing;
-        PageTitle = "Update Goal";
-        SelectedGoalType = existing.GoalType;
-        Description = existing.Description;
-        StartValue = existing.StartValue;
-        CurrentValue = existing.CurrentValue;
-        TargetValue = existing.TargetValue;
-        Unit = existing.Unit;
-        StartDate = existing.StartDate;
-        TargetDate = existing.TargetDate ?? DateTime.Now.AddMonths(1);
+            _goal = existing;
+            PageTitle = "Update Goal";
+            SelectedGoalType = existing.GoalType;
+            Description = existing.Description;
+            StartValue = existing.StartValue;
+            CurrentValue = existing.CurrentValue;
+            TargetValue = existing.TargetValue;
+            Unit = existing.Unit;
+            StartDate = existing.StartDate;
+            TargetDate = existing.TargetDate ?? DateTime.Now.AddMonths(1);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load goal: {ex}");
+            ValidationMessage = "Couldn't load that goal.";
+        }
     }
 
     [ObservableProperty]
@@ -124,12 +137,12 @@ public partial class GoalDetailViewModel : ObservableObject
         _goal.TargetDate = TargetDate;
 
         await _goalRepository.SaveAsync(_goal);
-        await Shell.Current.GoToAsync("..");
+        await _navigator.GoBackAsync();
     }
 
     [RelayCommand]
     private async Task CancelAsync()
     {
-        await Shell.Current.GoToAsync("..");
+        await _navigator.GoBackAsync();
     }
 }

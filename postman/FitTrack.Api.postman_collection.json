@@ -1,0 +1,733 @@
+{
+  "info": {
+    "name": "FitTrack API - Workouts",
+    "description": "Part 1 test collection. Uses the dates 2030-01-15 and 2030-01-16 and deletes everything it creates, so it passes repeatedly in the Collection Runner.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "POST create workout (201)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Remove leftovers from an earlier failed run so the collection can be run repeatedly.",
+              "const base = pm.collectionVariables.get('baseUrl');",
+              "pm.sendRequest({ url: base + '/api/workouts', method: 'GET' }, (err, res) => {",
+              "    if (err || res.code !== 200) { return; }",
+              "    res.json().filter(w => w.date === '2030-01-15').forEach(w => {",
+              "        pm.sendRequest({ url: base + '/api/workouts/' + w.id, method: 'DELETE' }, () => {});",
+              "    });",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('Location header points at the new workout', () => {",
+              "    pm.response.to.have.header('Location');",
+              "    pm.expect(pm.response.headers.get('Location')).to.match(new RegExp('/api/workouts/' + json.id + '$'));",
+              "});",
+              "pm.test('Server assigned id and createdUtc (client over-posting ignored)', () => {",
+              "    pm.expect(json.id).to.not.equal(999);",
+              "    pm.expect(json.createdUtc).to.not.include('2000-01-01');",
+              "    pm.expect(json.createdUtc).to.be.a('string').and.not.empty;",
+              "});",
+              "pm.test('Response has the fields that were sent', () => {",
+              "    pm.expect(json.type).to.equal('Running');",
+              "    pm.expect(json.durationMinutes).to.equal(30);",
+              "});",
+              "pm.collectionVariables.set('workoutId', json.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\",\n  \"id\": 999,\n  \"createdUtc\": \"2000-01-01T00:00:00Z\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST duplicate type and date (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 409 Conflict', () => pm.response.to.have.status(409));",
+              "pm.test('Body is problem details', () => pm.expect(pm.response.json().title).to.equal('Duplicate workout'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 20,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST invalid duration (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('Error key uses the JSON name durationMinutes', () => {",
+              "    pm.expect(pm.response.json().errors).to.have.property('durationMinutes');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-16\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 0,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST missing required fields (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400 Bad Request', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GET all workouts (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Created workout is in the list', () => {",
+              "    const id = Number(pm.collectionVariables.get('workoutId'));",
+              "    pm.expect(pm.response.json().map(w => w.id)).to.include(id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET filter by type (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Every item is Running', () => {",
+              "    pm.response.json().forEach(w => pm.expect(w.type).to.equal('Running'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts?type=Running",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ],
+          "query": [
+            {
+              "key": "type",
+              "value": "Running"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET one workout (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Id matches', () => pm.expect(pm.response.json().id).to.equal(Number(pm.collectionVariables.get('workoutId'))));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET missing workout (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT replace workout (204)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 204 No Content', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 45,\n  \"caloriesBurned\": 450,\n  \"intensity\": \"High\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "GET after PUT shows the change (200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Updated values were saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.durationMinutes).to.equal(45);",
+              "    pm.expect(json.intensity).to.equal('High');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "PUT missing workout (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/999999",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "999999"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "PUT invalid body (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 400 Bad Request', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": -5,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST second workout for conflict test (201)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('otherId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Walking\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "PUT would duplicate another workout (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 409 Conflict', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{otherId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{otherId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "PUT same type and date as itself is allowed (204)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 204 (a workout is not its own duplicate)', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "DELETE workout (204)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 204 No Content', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DELETE second workout - cleanup (204)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 204 No Content', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{otherId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{otherId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DELETE already deleted workout (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/{{workoutId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "{{workoutId}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:7059"
+    },
+    {
+      "key": "workoutId",
+      "value": ""
+    },
+    {
+      "key": "otherId",
+      "value": ""
+    }
+  ]
+}

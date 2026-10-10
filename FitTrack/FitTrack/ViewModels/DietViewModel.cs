@@ -25,6 +25,10 @@ public partial class DietViewModel : ObservableObject
     [ObservableProperty]
     private bool isRefreshing;
 
+    /// <summary>Shown on the page when loading fails, so the user is not left with a silent blank list.</summary>
+    [ObservableProperty]
+    private string? errorMessage;
+
     // --- Daily nutrition totals ------------------------------------
     // Recomputed from Meals every time the list changes, rather than
     // stored independently, so they can never drift out of sync with
@@ -51,11 +55,13 @@ public partial class DietViewModel : ObservableObject
     private int calorieGoal = 2000;
 
     private readonly IMessenger _messenger;
+    private readonly IAppNavigator _navigator;
 
-    public DietViewModel(IDietRepository dietRepository, IMessenger messenger)
+    public DietViewModel(IDietRepository dietRepository, IMessenger messenger, IAppNavigator navigator)
     {
         _dietRepository = dietRepository;
         _messenger = messenger;
+        _navigator = navigator;
     }
 
     [RelayCommand]
@@ -67,6 +73,7 @@ public partial class DietViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            ErrorMessage = null;
 
             var meals = await _dietRepository.GetByDateAsync(DateTime.Today);
 
@@ -78,7 +85,8 @@ public partial class DietViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load meals: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Failed to load meals: {ex}");
+            ErrorMessage = "Couldn't load your meals. Pull down to try again.";
         }
         finally
         {
@@ -90,7 +98,7 @@ public partial class DietViewModel : ObservableObject
     [RelayCommand]
     private async Task AddMealAsync()
     {
-        await Shell.Current.GoToAsync(nameof(Views.MealDetailPage));
+        await _navigator.GoToAsync(nameof(Views.MealDetailPage));
     }
 
     [RelayCommand]
@@ -104,7 +112,7 @@ public partial class DietViewModel : ObservableObject
             { "MealId", meal.Id }
         };
 
-        await Shell.Current.GoToAsync(nameof(Views.MealDetailPage), navigationParameter);
+        await _navigator.GoToAsync(nameof(Views.MealDetailPage), navigationParameter);
     }
 
     [RelayCommand]
@@ -113,7 +121,7 @@ public partial class DietViewModel : ObservableObject
         if (meal is null)
             return;
 
-        bool confirmed = await Shell.Current.DisplayAlert(
+        bool confirmed = await _navigator.ConfirmAsync(
             "Delete Meal",
             $"Delete \"{meal.Name}\" from your log?",
             "Delete",

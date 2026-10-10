@@ -89,12 +89,17 @@
             </CollectionView>
         </RefreshView>
 
-        <Button Grid.Row="2"
-                Text="+ Set New Goal"
-                Command="{Binding AddGoalCommand}"
-                Margin="16"
-                CornerRadius="24"
-                HeightRequest="48" />
+        <VerticalStackLayout Grid.Row="2">
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{StaticResource DangerColor}"
+                   Margin="16,8,16,0"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+            <Button Text="+ Set New Goal"
+                    Command="{Binding AddGoalCommand}"
+                    Margin="16"
+                    CornerRadius="24"
+                    HeightRequest="48" />
+        </VerticalStackLayout>
 
     </Grid>
 </ContentPage>

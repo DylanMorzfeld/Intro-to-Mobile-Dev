@@ -20,6 +20,7 @@ public partial class WorkoutLogViewModel : ObservableObject
 {
     private readonly IWorkoutRepository _workoutRepository;
     private readonly IMessenger _messenger;
+    private readonly IAppNavigator _navigator;
 
     /// <summary>
     /// The list shown in the CollectionView. ObservableCollection
@@ -37,13 +38,18 @@ public partial class WorkoutLogViewModel : ObservableObject
     [ObservableProperty]
     private bool isRefreshing;
 
+    /// <summary>Shown on the page when loading fails, so the user is not left with a silent blank list.</summary>
+    [ObservableProperty]
+    private string? errorMessage;
+
     // Constructor injection: MauiProgram.cs hands this class a shared
     // IWorkoutRepository automatically. This ViewModel never has to know
     // (or care) whether that repository talks to SQLite or a remote API.
-    public WorkoutLogViewModel(IWorkoutRepository workoutRepository, IMessenger messenger)
+    public WorkoutLogViewModel(IWorkoutRepository workoutRepository, IMessenger messenger, IAppNavigator navigator)
     {
         _workoutRepository = workoutRepository;
         _messenger = messenger;
+        _navigator = navigator;
     }
 
     /// <summary>
@@ -60,6 +66,7 @@ public partial class WorkoutLogViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            ErrorMessage = null;
 
             var workouts = await _workoutRepository.GetAllAsync();
 
@@ -69,10 +76,9 @@ public partial class WorkoutLogViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            // TODO (later milestone): surface this via a dialog/toast
-            // service instead of just writing to the debug console.
-            // Logs {ex} (not ex.Message) so the full stack trace is captured.
+            // {ex} (not ex.Message) so the full stack trace is captured.
             System.Diagnostics.Debug.WriteLine($"Failed to load workouts: {ex}");
+            ErrorMessage = "Couldn't load your workouts. Pull down to try again.";
         }
         finally
         {
@@ -89,7 +95,7 @@ public partial class WorkoutLogViewModel : ObservableObject
     [RelayCommand]
     private async Task AddWorkoutAsync()
     {
-        await Shell.Current.GoToAsync(nameof(Views.WorkoutDetailPage));
+        await _navigator.GoToAsync(nameof(Views.WorkoutDetailPage));
     }
 
     /// <summary>
@@ -109,7 +115,7 @@ public partial class WorkoutLogViewModel : ObservableObject
             { "WorkoutId", workout.Id }
         };
 
-        await Shell.Current.GoToAsync(nameof(Views.WorkoutDetailPage), navigationParameter);
+        await _navigator.GoToAsync(nameof(Views.WorkoutDetailPage), navigationParameter);
     }
 
     /// <summary>
@@ -122,7 +128,7 @@ public partial class WorkoutLogViewModel : ObservableObject
         if (workout is null)
             return;
 
-        bool confirmed = await Shell.Current.DisplayAlert(
+        bool confirmed = await _navigator.ConfirmAsync(
             "Delete Workout",
             $"Delete this {workout.ActivityType} workout from {workout.DateLogged:MMM d}?",
             "Delete",

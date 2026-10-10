@@ -1,11 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using FitTrack.Services.Interfaces;
 
 namespace FitTrack;
 
 public partial class App : Application
 {
-	public App()
+	// Taking IActivityFeed makes the container create the feed at launch, so it is
+	// already listening for events before any page is opened.
+	public App(IActivityFeed activityFeed)
 	{
+		_ = activityFeed;
 		InitializeComponent();
 	}
 

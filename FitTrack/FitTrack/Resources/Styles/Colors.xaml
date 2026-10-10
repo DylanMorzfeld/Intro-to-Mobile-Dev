@@ -18,6 +18,14 @@
     <Color x:Key="MidnightBlue">#190649</Color>
     <Color x:Key="OffBlack">#1f1f1f</Color>
 
+    <!-- App palette used by swipe actions, Save buttons, and goal progress bars -->
+    <Color x:Key="ActionColor">#3F6FD1</Color>
+    <Color x:Key="DangerColor">#D1495B</Color>
+    <Color x:Key="SuccessColor">#2E933C</Color>
+    <Color x:Key="GoalProgressLow">#D1495B</Color>
+    <Color x:Key="GoalProgressMid">#E8A33D</Color>
+    <Color x:Key="GoalProgressHigh">#2E933C</Color>
+
     <Color x:Key="Gray100">#E1E1E1</Color>
     <Color x:Key="Gray200">#C8C8C8</Color>
     <Color x:Key="Gray300">#ACACAC</Color>

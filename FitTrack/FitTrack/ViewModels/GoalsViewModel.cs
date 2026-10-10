@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FitTrack.Models;
-using FitTrack.Services;
 using FitTrack.Services.Interfaces;
 using System.Collections.ObjectModel;
 
@@ -14,6 +13,7 @@ namespace FitTrack.ViewModels;
 public partial class GoalsViewModel : ObservableObject
 {
     private readonly IGoalRepository _goalRepository;
+    private readonly IAppNavigator _navigator;
 
     public ObservableCollection<FitnessGoal> Goals { get; } = new();
 
@@ -23,15 +23,20 @@ public partial class GoalsViewModel : ObservableObject
     [ObservableProperty]
     private bool isRefreshing;
 
-    private readonly ActivityFeedService _activityFeed;
+    /// <summary>Shown on the page when loading fails, so the user is not left with a silent blank list.</summary>
+    [ObservableProperty]
+    private string? errorMessage;
+
+    private readonly IActivityFeed _activityFeed;
 
     /// <summary>Recent activity captured from the app's custom events.</summary>
     public ObservableCollection<string> RecentActivity => _activityFeed.RecentActivity;
 
-    public GoalsViewModel(IGoalRepository goalRepository, ActivityFeedService activityFeed)
+    public GoalsViewModel(IGoalRepository goalRepository, IActivityFeed activityFeed, IAppNavigator navigator)
     {
         _goalRepository = goalRepository;
         _activityFeed = activityFeed;
+        _navigator = navigator;
     }
 
     [RelayCommand]
@@ -43,6 +48,7 @@ public partial class GoalsViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            ErrorMessage = null;
 
             var goals = await _goalRepository.GetAllAsync();
 
@@ -52,7 +58,8 @@ public partial class GoalsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load goals: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Failed to load goals: {ex}");
+            ErrorMessage = "Couldn't load your goals. Pull down to try again.";
         }
         finally
         {
@@ -64,7 +71,7 @@ public partial class GoalsViewModel : ObservableObject
     [RelayCommand]
     private async Task AddGoalAsync()
     {
-        await Shell.Current.GoToAsync(nameof(Views.GoalDetailPage));
+        await _navigator.GoToAsync(nameof(Views.GoalDetailPage));
     }
 
     [RelayCommand]
@@ -78,7 +85,7 @@ public partial class GoalsViewModel : ObservableObject
             { "GoalId", goal.Id }
         };
 
-        await Shell.Current.GoToAsync(nameof(Views.GoalDetailPage), navigationParameter);
+        await _navigator.GoToAsync(nameof(Views.GoalDetailPage), navigationParameter);
     }
 
     [RelayCommand]
@@ -87,7 +94,7 @@ public partial class GoalsViewModel : ObservableObject
         if (goal is null)
             return;
 
-        bool confirmed = await Shell.Current.DisplayAlert(
+        bool confirmed = await _navigator.ConfirmAsync(
             "Delete Goal",
             $"Delete the goal \"{goal.Description}\"? This can't be undone.",
             "Delete",
