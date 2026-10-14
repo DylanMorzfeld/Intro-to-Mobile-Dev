@@ -109,3 +109,25 @@ Only one workout of the same `type` is allowed per day. Creating or updating a w
 ### Error format
 
 Errors use the standard ASP.NET Core problem-details format (`application/problem+json`).
+
+### Project layout
+
+| Folder | What it holds |
+|---|---|
+| `Controllers` | `WorkoutsController`: reads the request, calls the service once, returns the status code |
+| `Services` | `IWorkoutService` and `WorkoutService`: the one-workout-per-type-per-day rule, reported as an outcome (not an HTTP code) |
+| `Repositories` | `IWorkoutRepository` and `JsonWorkoutRepository`: reads and writes the JSON file |
+| `Models` | `Workout`, the stored shape, including the server-controlled `Id` and `CreatedUtc` |
+| `DTOs` | `WorkoutRequest` (what clients send, with validation) and `WorkoutResponse` (what the API returns) |
+| `Data` | `workouts.json`, created on the first POST. It is git-ignored. |
+
+### Run it
+
+1. Open `FitTrack.Api/FitTrack.Api.slnx` in Visual Studio.
+2. Choose the **https** profile and press **F5**. The API listens on `https://localhost:7059`.
+3. In development, the OpenAPI document is at `https://localhost:7059/openapi/v1.json`.
+
+### Test it
+
+- **Quick manual checks:** open `FitTrack.Api/FitTrack.Api.http` in Visual Studio and click **Send request** above each block. It covers every endpoint, a 400, a 409, and over-posting.
+- **Postman collection:** import `postman/FitTrack.Api.postman_collection.json`. It uses a `{{baseUrl}}` variable (default `https://localhost:7059`) and an id variable set from the POST response. It has 18 requests and 27 tests, deletes everything it creates, and can be run repeatedly in the Collection Runner. In Postman, turn off **SSL certificate verification** (Settings > General) so the local development certificate is accepted.
