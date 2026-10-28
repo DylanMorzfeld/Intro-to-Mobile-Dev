@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FitTrack.ViewModels"
+             x:Class="FitTrack.Views.LoginPage"
+             x:DataType="vm:LoginViewModel"
+             Title="Log in">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <Label Text="{Binding Message}"
+                   FontAttributes="Bold"
+                   IsVisible="{Binding Message, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
+            <Label Text="User name" FontAttributes="Bold" />
+            <Entry Text="{Binding Username}"
+                   Placeholder="User name"
+                   Keyboard="Plain"
+                   AutomationId="UsernameEntry" />
+
+            <Label Text="Password" FontAttributes="Bold" />
+            <Entry Text="{Binding Password}"
+                   Placeholder="Password"
+                   IsPassword="True"
+                   ReturnCommand="{Binding LoginCommand}"
+                   AutomationId="PasswordEntry" />
+
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{StaticResource DangerColor}"
+                   FontSize="13"
+                   IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" Margin="0,16,0,0">
+                <Button Grid.Column="0"
+                        Text="Cancel"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="LightGray"
+                        TextColor="Black" />
+
+                <Button Grid.Column="1"
+                        Text="Log in"
+                        BackgroundColor="{StaticResource ActionColor}"
+                        Command="{Binding LoginCommand}" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

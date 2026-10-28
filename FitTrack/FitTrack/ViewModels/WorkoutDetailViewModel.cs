@@ -1,26 +1,23 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FitTrack.Models;
+using FitTrack.Services.Api;
 using FitTrack.Services.Interfaces;
 
 namespace FitTrack.ViewModels;
 
 /// <summary>
-/// Backs WorkoutDetailPage, used for both creating a new workout and
-/// editing an existing one. Which mode it's in depends on whether a
-/// WorkoutId was passed in via navigation.
+/// Backs WorkoutDetailPage, used for both creating a new workout and editing an existing one.
+/// Which mode it is in depends on whether a WorkoutId was passed in via navigation.
+/// Saving goes to the API; the API's answer (validation errors, duplicates, 401) is shown here.
 /// </summary>
 [QueryProperty(nameof(WorkoutId), "WorkoutId")]
 public partial class WorkoutDetailViewModel : ObservableObject
 {
-    private readonly IWorkoutRepository _workoutRepository;
+    private readonly IWorkoutApiClient _api;
+    private readonly ITokenStore _tokens;
     private readonly IAppNavigator _navigator;
 
-    // Tracks the actual Workout object being edited/created behind the
-    // scenes. The individual [ObservableProperty] fields below are what
-    // the View actually binds to - keeping them separate from this object
-    // makes it easy to add per-field validation later without restructuring
-    // any XAML bindings.
     private Workout _workout = new();
 
     [ObservableProperty]
@@ -50,26 +47,26 @@ public partial class WorkoutDetailViewModel : ObservableObject
     [ObservableProperty]
     private bool isRecurring;
 
-    // Backing lists for the two Pickers in the View.
+    [ObservableProperty]
+    private string? validationMessage;
+
+    [ObservableProperty]
+    private bool isSaving;
+
     public List<ActivityType> ActivityTypes { get; } = Enum.GetValues<ActivityType>().ToList();
     public List<IntensityLevel> IntensityLevels { get; } = Enum.GetValues<IntensityLevel>().ToList();
 
-    public WorkoutDetailViewModel(IWorkoutRepository workoutRepository, IAppNavigator navigator)
+    public WorkoutDetailViewModel(IWorkoutApiClient api, ITokenStore tokens, IAppNavigator navigator)
     {
-        _workoutRepository = workoutRepository;
+        _api = api;
+        _tokens = tokens;
         _navigator = navigator;
     }
 
-    /// <summary>
-    /// Auto-invoked by .NET MAUI Shell whenever WorkoutId changes as a
-    /// result of navigation (enabled by the [QueryProperty] attribute
-    /// above). A value of 0 means "new workout"; anything else means
-    /// "load and edit this existing workout".
-    /// </summary>
+    // Shell sets WorkoutId from the navigation parameter. 0 or never set = new workout.
     partial void OnWorkoutIdChanged(int value) => _ = LoadWorkoutAsync(value);
 
-    // Not async void: any failure is caught here and shown on the form instead of
-    // vanishing into the process-wide unhandled-exception event.
+    // Not async void: any failure is caught here and shown on the form.
     private async Task LoadWorkoutAsync(int id)
     {
         if (id == 0)
@@ -80,10 +77,22 @@ public partial class WorkoutDetailViewModel : ObservableObject
 
         try
         {
-            var existing = await _workoutRepository.GetByIdAsync(id);
-            if (existing is null)
-                return;
+            var result = await _api.GetByIdAsync(id);
 
+            if (result.IsNotFound)
+            {
+                // Deleted elsewhere since the list loaded: leave the form; the list refreshes on return.
+                await _navigator.GoBackAsync();
+                return;
+            }
+
+            if (!result.Success)
+            {
+                ValidationMessage = result.ErrorMessage;
+                return;
+            }
+
+            var existing = result.Value!;
             _workout = existing;
             PageTitle = "Edit Workout";
             SelectedActivityType = existing.ActivityType;
@@ -101,12 +110,13 @@ public partial class WorkoutDetailViewModel : ObservableObject
         }
     }
 
-    [ObservableProperty]
-    private string? validationMessage;
-
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsSaving)
+            return;
+
+        // Quick checks that need no network. The API checks everything again; its answers are shown below.
         if (DurationMinutes <= 0)
         {
             ValidationMessage = "Duration must be greater than 0 minutes.";
@@ -129,8 +139,47 @@ public partial class WorkoutDetailViewModel : ObservableObject
         _workout.Notes = Notes;
         _workout.IsRecurring = IsRecurring;
 
-        await _workoutRepository.SaveAsync(_workout);
-        await _navigator.GoBackAsync();
+        try
+        {
+            IsSaving = true;
+
+            ApiResult result = _workout.Id == 0
+                ? await _api.CreateAsync(_workout)
+                : await _api.UpdateAsync(_workout);
+
+            if (result.Success)
+            {
+                await _navigator.GoBackAsync();
+                return;
+            }
+
+            if (result.IsUnauthorized)
+            {
+                // Token expired or rejected. The form stays as it is, underneath the login page.
+                await _tokens.ClearAsync();
+                await _navigator.GoToAsync(nameof(Views.LoginPage),
+                    new Dictionary<string, object> { { "Message", "Your session ended. Please log in to save." } });
+                return;
+            }
+
+            if (result.IsNotFound)
+            {
+                await _navigator.GoBackAsync();
+                return;
+            }
+
+            // 400 (field errors), 409 (duplicate), 429, 5xx, and no connection all land here.
+            ValidationMessage = result.ErrorMessage;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to save workout: {ex}");
+            ValidationMessage = "Couldn't save that workout. Try again.";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
     [RelayCommand]

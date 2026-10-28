@@ -1,10 +1,321 @@
 {
   "info": {
-    "name": "FitTrack API - Workouts",
-    "description": "Part 1 test collection. Uses the dates 2030-01-15 and 2030-01-16 and deletes everything it creates, so it passes repeatedly in the Collection Runner.",
+    "name": "FitTrack API - Workouts (auth on/off)",
+    "description": "Run the whole collection in the Collection Runner, in order. The first request logs in and detects whether the API has authentication on, so the same collection is green in both modes (requests that only make sense with auth on are skipped when it is off). Every record the tests create has the note 'postman-test:<runId>' and a random far-future date; cleanup deletes only records with that marker. Set the 'username' and 'password' collection variables (current value, local only) to the demo user from --setup-auth. Never put them in the exported file.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const token = pm.collectionVariables.get('token');",
+          "const skip = pm.info.requestName.includes('(no token)') || pm.request.headers.has('Authorization');",
+          "if (token && !skip) {",
+          "    pm.request.headers.add({ key: 'Authorization', value: 'Bearer ' + token });",
+          "}"
+        ]
+      }
+    }
+  ],
   "item": [
+    {
+      "name": "Login (200 with auth on, 404 with auth off)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// New run: new id and new far-future dates, so this run can never collide with real data or an earlier run.",
+              "const pad = n => String(n).padStart(2, '0');",
+              "const y = 2031 + Math.floor(Math.random() * 68), m = 1 + Math.floor(Math.random() * 12), d = 1 + Math.floor(Math.random() * 27);",
+              "pm.collectionVariables.set('runId', Date.now().toString(36) + Math.random().toString(36).slice(2, 6));",
+              "pm.collectionVariables.set('runDate', y + '-' + pad(m) + '-' + pad(d));",
+              "pm.collectionVariables.set('runDate2', y + '-' + pad(m) + '-' + pad(d + 1));",
+              "pm.collectionVariables.set('token', '');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// This request also detects the API's mode, so the rest of the collection adapts and passes in both.",
+              "if (pm.response.code === 200) {",
+              "    const json = pm.response.json();",
+              "    pm.test('Auth ON: login returns a bearer token', () => {",
+              "        pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+              "        pm.expect(json.tokenType).to.equal('Bearer');",
+              "        pm.expect(json.expiresIn).to.be.above(0);",
+              "    });",
+              "    pm.collectionVariables.set('authEnabled', 'true');",
+              "    pm.collectionVariables.set('token', json.accessToken);",
+              "} else {",
+              "    pm.test('Auth OFF: login endpoint is not available (404)', () => pm.response.to.have.status(404));",
+              "    pm.collectionVariables.set('authEnabled', 'false');",
+              "    pm.collectionVariables.set('token', '');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Login with wrong password (401, auth on only)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('authEnabled') !== 'true') { pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Wrong password is rejected with 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"definitely-not-the-password\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST create without a token (401, auth on only) (no token)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('authEnabled') !== 'true') { pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Write without a token is rejected with 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "POST create with a garbage token (401, auth on only)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('authEnabled') !== 'true') { pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Write with an invalid token is rejected with 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer not.a.real.token"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "DELETE without a token (401, auth on only) (no token)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('authEnabled') !== 'true') { pm.execution.skipRequest(); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Delete without a token is rejected with 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET all without a token stays public (200) (no token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Reads are public: 200 without a token', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/workouts",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "workouts"
+          ]
+        }
+      }
+    },
     {
       "name": "POST create workout (201)",
       "event": [
@@ -13,12 +324,15 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "// Remove leftovers from an earlier failed run so the collection can be run repeatedly.",
+              "// Delete leftovers from earlier FAILED runs. Only records whose notes start with 'postman-test:' are touched;",
+              "// anything else in the database (real workouts) is never deleted.",
               "const base = pm.collectionVariables.get('baseUrl');",
+              "const token = pm.collectionVariables.get('token');",
               "pm.sendRequest({ url: base + '/api/workouts', method: 'GET' }, (err, res) => {",
               "    if (err || res.code !== 200) { return; }",
-              "    res.json().filter(w => w.date === '2030-01-15').forEach(w => {",
-              "        pm.sendRequest({ url: base + '/api/workouts/' + w.id, method: 'DELETE' }, () => {});",
+              "    res.json().filter(w => (w.notes || '').startsWith('postman-test:')).forEach(w => {",
+              "        const header = token ? { Authorization: 'Bearer ' + token } : {};",
+              "        pm.sendRequest({ url: base + '/api/workouts/' + w.id, method: 'DELETE', header }, () => {});",
               "    });",
               "});"
             ]
@@ -43,6 +357,7 @@
               "pm.test('Response has the fields that were sent', () => {",
               "    pm.expect(json.type).to.equal('Running');",
               "    pm.expect(json.durationMinutes).to.equal(30);",
+              "    pm.expect(json.isCompleted).to.equal(false);",
               "});",
               "pm.collectionVariables.set('workoutId', json.id);"
             ]
@@ -69,7 +384,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\",\n  \"id\": 999,\n  \"createdUtc\": \"2000-01-01T00:00:00Z\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\",\n  \"id\": 999,\n  \"createdUtc\": \"2000-01-01T00:00:00Z\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -112,7 +427,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 20,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 20,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -157,7 +472,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-16\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 0,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate2}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 0,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -370,7 +685,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 45,\n  \"caloriesBurned\": 450,\n  \"intensity\": \"High\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 45,\n  \"caloriesBurned\": 450,\n  \"intensity\": \"High\",\n  \"notes\": \"postman-test:{{runId}}\",\n  \"isCompleted\": true\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -392,6 +707,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json.durationMinutes).to.equal(45);",
               "    pm.expect(json.intensity).to.equal('High');",
+              "    pm.expect(json.isCompleted).to.equal(true);",
               "});"
             ]
           }
@@ -447,7 +763,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -490,7 +806,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": -5,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": -5,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -533,7 +849,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Walking\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Walking\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -576,7 +892,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -619,7 +935,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"date\": \"2030-01-15\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"Postman test\"\n}",
+          "raw": "{\n  \"date\": \"{{runDate}}\",\n  \"type\": \"Running\",\n  \"durationMinutes\": 30,\n  \"caloriesBurned\": 300,\n  \"intensity\": \"Moderate\",\n  \"notes\": \"postman-test:{{runId}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -720,6 +1036,36 @@
     {
       "key": "baseUrl",
       "value": "https://localhost:7059"
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "authEnabled",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "runDate",
+      "value": ""
+    },
+    {
+      "key": "runDate2",
+      "value": ""
     },
     {
       "key": "workoutId",

@@ -4,108 +4,121 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using FitTrack.Messages;
 using FitTrack.Models;
+using FitTrack.Services.Api;
 using FitTrack.Services.Interfaces;
 
 namespace FitTrack.ViewModels;
 
 /// <summary>
-/// Backs WorkoutLogPage: the main list of logged workouts.
+/// Backs WorkoutLogPage: the list of workouts, loaded from the API.
 ///
-/// This class has ZERO references to XAML, Pages, or UI controls - that's
-/// the separation of concerns MVVM is built on. It exposes data via
-/// bindable properties and behavior via ICommand, and the View binds to
-/// both declaratively in XAML rather than the ViewModel reaching into the UI.
+/// Browsing needs no login (the API's GETs are public). Every write (add, edit, delete, complete)
+/// first checks for a token; without one the user is sent to the login page. If the token is
+/// rejected anyway (expired, or the API restarted with a new key), the API answers 401, the saved
+/// token is cleared, and the user is sent to the login page too.
 /// </summary>
 public partial class WorkoutLogViewModel : ObservableObject
 {
-    private readonly IWorkoutRepository _workoutRepository;
+    private const string LoginMessage = "Please log in to make changes.";
+
+    private readonly IWorkoutApiClient _api;
+    private readonly ITokenStore _tokens;
     private readonly IMessenger _messenger;
     private readonly IAppNavigator _navigator;
 
-    /// <summary>
-    /// The list shown in the CollectionView. ObservableCollection
-    /// automatically notifies the UI whenever items are added or removed,
-    /// so the list on screen updates itself without any manual refresh code.
-    /// </summary>
+    private CancellationTokenSource? _loadCts;
+
     public ObservableCollection<Workout> Workouts { get; } = new();
 
-    // [ObservableProperty] is a source generator from CommunityToolkit.Mvvm.
-    // Behind the scenes it generates a public "IsBusy" property plus all the
-    // INotifyPropertyChanged boilerplate, from this one private field.
     [ObservableProperty]
     private bool isBusy;
 
     [ObservableProperty]
     private bool isRefreshing;
 
-    /// <summary>Shown on the page when loading fails, so the user is not left with a silent blank list.</summary>
+    /// <summary>Shown on the page when something fails, so the user is never left with a silent blank list.</summary>
     [ObservableProperty]
     private string? errorMessage;
 
-    // Constructor injection: MauiProgram.cs hands this class a shared
-    // IWorkoutRepository automatically. This ViewModel never has to know
-    // (or care) whether that repository talks to SQLite or a remote API.
-    public WorkoutLogViewModel(IWorkoutRepository workoutRepository, IMessenger messenger, IAppNavigator navigator)
+    /// <summary>"Log in" or "Log out", shown in the toolbar.</summary>
+    [ObservableProperty]
+    private string authButtonText = "Log in";
+
+    public WorkoutLogViewModel(IWorkoutApiClient api, ITokenStore tokens, IMessenger messenger, IAppNavigator navigator)
     {
-        _workoutRepository = workoutRepository;
+        _api = api;
+        _tokens = tokens;
         _messenger = messenger;
         _navigator = navigator;
     }
 
-    /// <summary>
-    /// [RelayCommand] generates a public LoadWorkoutsCommand (ICommand).
-    /// The View binds to it - e.g. a RefreshView's Command, or the page
-    /// calling it directly from OnAppearing.
-    /// </summary>
-    [RelayCommand]
+    // AllowConcurrentExecutions: a new load cancels the one still running instead of being ignored,
+    // so the newest request always wins and a slow old response can never overwrite a newer list.
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task LoadWorkoutsAsync()
     {
-        if (IsBusy)
-            return;
+        _loadCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _loadCts = cts;
 
         try
         {
             IsBusy = true;
             ErrorMessage = null;
+            await RefreshAuthStateAsync();
 
-            var workouts = await _workoutRepository.GetAllAsync();
+            var result = await _api.GetAllAsync(cts.Token);
+            if (cts.IsCancellationRequested)
+                return;
+
+            if (!result.Success)
+            {
+                ErrorMessage = result.ErrorMessage;
+                return;
+            }
 
             Workouts.Clear();
-            foreach (var workout in workouts)
+            foreach (var workout in result.Value!)
                 Workouts.Add(workout);
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // Replaced by a newer load, or the page went away. Not an error.
         }
         catch (Exception ex)
         {
-            // {ex} (not ex.Message) so the full stack trace is captured.
             System.Diagnostics.Debug.WriteLine($"Failed to load workouts: {ex}");
             ErrorMessage = "Couldn't load your workouts. Pull down to try again.";
         }
         finally
         {
-            IsBusy = false;
-            IsRefreshing = false;
+            if (ReferenceEquals(_loadCts, cts))
+            {
+                IsBusy = false;
+                IsRefreshing = false;
+            }
         }
     }
 
-    /// <summary>
-    /// Navigates to a blank WorkoutDetailPage so the user can log a new
-    /// workout. No "WorkoutId" query parameter is passed, which tells the
-    /// detail ViewModel this is a new entry rather than an edit.
-    /// </summary>
+    /// <summary>Called by the page when it disappears, so a request never outlives its screen.</summary>
+    public void CancelLoad() => _loadCts?.Cancel();
+
     [RelayCommand]
     private async Task AddWorkoutAsync()
     {
+        if (!await EnsureLoggedInAsync())
+            return;
+
         await _navigator.GoToAsync(nameof(Views.WorkoutDetailPage));
     }
 
-    /// <summary>
-    /// Navigates to the detail page for an existing workout, passing its Id
-    /// as a query parameter so the detail ViewModel can load it for editing.
-    /// </summary>
     [RelayCommand]
     private async Task SelectWorkoutAsync(Workout? workout)
     {
         if (workout is null)
+            return;
+
+        if (!await EnsureLoggedInAsync())
             return;
 
         _messenger.Send(new WorkoutLoggedMessage(workout, WorkoutLogAction.EditRequested));
@@ -118,14 +131,13 @@ public partial class WorkoutLogViewModel : ObservableObject
         await _navigator.GoToAsync(nameof(Views.WorkoutDetailPage), navigationParameter);
     }
 
-    /// <summary>
-    /// Deletes a workout directly from the list (e.g. via a swipe action)
-    /// without navigating away, for a fast, low-friction interaction.
-    /// </summary>
     [RelayCommand]
     private async Task DeleteWorkoutAsync(Workout? workout)
     {
         if (workout is null)
+            return;
+
+        if (!await EnsureLoggedInAsync())
             return;
 
         bool confirmed = await _navigator.ConfirmAsync(
@@ -137,29 +149,95 @@ public partial class WorkoutLogViewModel : ObservableObject
         if (!confirmed)
             return;
 
-        await _workoutRepository.DeleteAsync(workout);
-        Workouts.Remove(workout);
+        ErrorMessage = null;
+        var result = await _api.DeleteAsync(workout.Id);
+
+        if (await HandleUnauthorizedAsync(result))
+            return;
+
+        if (result.Success || result.IsNotFound)
+        {
+            // 404 means it is already gone, which is what the user wanted.
+            Workouts.Remove(workout);
+            return;
+        }
+
+        ErrorMessage = result.ErrorMessage;
     }
 
-    /// <summary>
-    /// Toggles a workout's completed status, triggered by the right-swipe
-    /// "Complete" gesture. Persists immediately so the change survives an
-    /// app restart, then reloads the list so every row redraws with the saved state.
-    /// </summary>
     [RelayCommand]
     private async Task ToggleCompleteAsync(Workout? workout)
     {
         if (workout is null)
             return;
 
+        if (!await EnsureLoggedInAsync())
+            return;
+
+        ErrorMessage = null;
         workout.IsCompleted = !workout.IsCompleted;
-        await _workoutRepository.SaveAsync(workout);
+        var result = await _api.UpdateAsync(workout);
+
+        if (!result.Success)
+        {
+            workout.IsCompleted = !workout.IsCompleted; // put it back: the API did not save the change
+
+            if (await HandleUnauthorizedAsync(result))
+                return;
+
+            ErrorMessage = result.ErrorMessage;
+            return;
+        }
 
         _messenger.Send(new WorkoutLoggedMessage(
             workout,
             workout.IsCompleted ? WorkoutLogAction.Completed : WorkoutLogAction.Reopened));
 
-        // Reload from the database so every row redraws with the saved state.
+        // Reload from the API so every row redraws with the saved state.
         await LoadWorkoutsAsync();
     }
+
+    [RelayCommand]
+    private async Task ToggleLoginAsync()
+    {
+        if (await _tokens.GetTokenAsync() is not null)
+        {
+            await _tokens.ClearAsync();
+            AuthButtonText = "Log in";
+            ErrorMessage = null;
+            return;
+        }
+
+        await GoToLoginAsync("Log in to add, edit, or delete workouts.");
+    }
+
+    private async Task RefreshAuthStateAsync()
+    {
+        AuthButtonText = await _tokens.GetTokenAsync() is null ? "Log in" : "Log out";
+    }
+
+    /// <summary>True when a valid token exists. Otherwise opens the login page and returns false.</summary>
+    private async Task<bool> EnsureLoggedInAsync()
+    {
+        if (await _tokens.GetTokenAsync() is not null)
+            return true;
+
+        await GoToLoginAsync(LoginMessage);
+        return false;
+    }
+
+    /// <summary>The API said 401: forget the token and ask the user to log in again.</summary>
+    private async Task<bool> HandleUnauthorizedAsync(ApiResult result)
+    {
+        if (!result.IsUnauthorized)
+            return false;
+
+        await _tokens.ClearAsync();
+        AuthButtonText = "Log in";
+        await GoToLoginAsync(LoginMessage);
+        return true;
+    }
+
+    private Task GoToLoginAsync(string message) =>
+        _navigator.GoToAsync(nameof(Views.LoginPage), new Dictionary<string, object> { { "Message", message } });
 }

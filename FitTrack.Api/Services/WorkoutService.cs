@@ -10,11 +10,18 @@ namespace FitTrack.Api.Services;
 /// </summary>
 public class WorkoutService : IWorkoutService
 {
-    private readonly IWorkoutRepository _repository;
+    // One critical section for every create and update. The duplicate check and the write must
+    // happen together: without this, two simultaneous identical POSTs can both pass the check
+    // before either one is saved. static because the service itself is created per request.
+    private static readonly SemaphoreSlim WriteLock = new(1, 1);
 
-    public WorkoutService(IWorkoutRepository repository)
+    private readonly IWorkoutRepository _repository;
+    private readonly ILogger<WorkoutService> _logger;
+
+    public WorkoutService(IWorkoutRepository repository, ILogger<WorkoutService> logger)
     {
         _repository = repository;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<WorkoutResponse>> GetAllAsync(WorkoutType? type, CancellationToken cancellationToken)
@@ -37,9 +44,25 @@ public class WorkoutService : IWorkoutService
 
     public async Task<WorkoutResult> CreateAsync(WorkoutRequest request, CancellationToken cancellationToken)
     {
+        await WriteLock.WaitAsync(cancellationToken);
+        try
+        {
+            return await CreateLockedAsync(request, cancellationToken);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
+    private async Task<WorkoutResult> CreateLockedAsync(WorkoutRequest request, CancellationToken cancellationToken)
+    {
         var existing = await _repository.GetAllAsync(cancellationToken);
         if (IsDuplicate(existing, request, excludeId: null))
+        {
+            _logger.LogWarning("Create rejected: a {Type} workout already exists on {Date}", request.Type, request.Date);
             return new WorkoutResult(ServiceOutcome.Duplicate);
+        }
 
         // Id comes from the repository; CreatedUtc is set here. The client can set neither.
         var workout = new Workout
@@ -50,23 +73,55 @@ public class WorkoutService : IWorkoutService
             CaloriesBurned = request.CaloriesBurned!.Value,
             Intensity = request.Intensity!.Value,
             Notes = request.Notes,
+            IsCompleted = request.IsCompleted,
+            IsRecurring = request.IsRecurring,
             CreatedUtc = DateTime.UtcNow
         };
 
-        var saved = await _repository.AddAsync(workout, cancellationToken);
+        Workout saved;
+        try
+        {
+            saved = await _repository.AddAsync(workout, cancellationToken);
+        }
+        catch (DuplicateWorkoutException)
+        {
+            _logger.LogWarning("Create rejected by the database: a {Type} workout already exists on {Date}", request.Type, request.Date);
+            return new WorkoutResult(ServiceOutcome.Duplicate);
+        }
+
+        _logger.LogInformation("Created workout {WorkoutId}: {Type} on {Date}", saved.Id, saved.Type, saved.Date);
         return new WorkoutResult(ServiceOutcome.Success, ToResponse(saved));
     }
 
     public async Task<WorkoutResult> UpdateAsync(int id, WorkoutRequest request, CancellationToken cancellationToken)
     {
+        await WriteLock.WaitAsync(cancellationToken);
+        try
+        {
+            return await UpdateLockedAsync(id, request, cancellationToken);
+        }
+        finally
+        {
+            WriteLock.Release();
+        }
+    }
+
+    private async Task<WorkoutResult> UpdateLockedAsync(int id, WorkoutRequest request, CancellationToken cancellationToken)
+    {
         var current = await _repository.GetByIdAsync(id, cancellationToken);
         if (current is null)
+        {
+            _logger.LogWarning("Update failed: workout {WorkoutId} was not found", id);
             return new WorkoutResult(ServiceOutcome.NotFound);
+        }
 
         // excludeId: the workout being edited must not count as its own duplicate.
         var all = await _repository.GetAllAsync(cancellationToken);
         if (IsDuplicate(all, request, excludeId: id))
+        {
+            _logger.LogWarning("Update rejected: another {Type} workout already exists on {Date}", request.Type, request.Date);
             return new WorkoutResult(ServiceOutcome.Duplicate);
+        }
 
         var updated = new Workout
         {
@@ -77,20 +132,36 @@ public class WorkoutService : IWorkoutService
             DurationMinutes = request.DurationMinutes!.Value,
             CaloriesBurned = request.CaloriesBurned!.Value,
             Intensity = request.Intensity!.Value,
-            Notes = request.Notes
+            Notes = request.Notes,
+            IsCompleted = request.IsCompleted,
+            IsRecurring = request.IsRecurring
         };
 
-        if (!await _repository.UpdateAsync(updated, cancellationToken))
-            return new WorkoutResult(ServiceOutcome.NotFound);
+        try
+        {
+            if (!await _repository.UpdateAsync(updated, cancellationToken))
+                return new WorkoutResult(ServiceOutcome.NotFound);
+        }
+        catch (DuplicateWorkoutException)
+        {
+            _logger.LogWarning("Update rejected by the database: another {Type} workout already exists on {Date}", request.Type, request.Date);
+            return new WorkoutResult(ServiceOutcome.Duplicate);
+        }
 
+        _logger.LogInformation("Updated workout {WorkoutId}: {Type} on {Date}", updated.Id, updated.Type, updated.Date);
         return new WorkoutResult(ServiceOutcome.Success, ToResponse(updated));
     }
 
     public async Task<ServiceOutcome> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        return await _repository.DeleteAsync(id, cancellationToken)
-            ? ServiceOutcome.Success
-            : ServiceOutcome.NotFound;
+        if (!await _repository.DeleteAsync(id, cancellationToken))
+        {
+            _logger.LogWarning("Delete failed: workout {WorkoutId} was not found", id);
+            return ServiceOutcome.NotFound;
+        }
+
+        _logger.LogInformation("Deleted workout {WorkoutId}", id);
+        return ServiceOutcome.Success;
     }
 
     private static bool IsDuplicate(IReadOnlyList<Workout> existing, WorkoutRequest request, int? excludeId)
@@ -110,6 +181,8 @@ public class WorkoutService : IWorkoutService
         CaloriesBurned = w.CaloriesBurned,
         Intensity = w.Intensity,
         Notes = w.Notes,
+        IsCompleted = w.IsCompleted,
+        IsRecurring = w.IsRecurring,
         CreatedUtc = w.CreatedUtc
     };
 }

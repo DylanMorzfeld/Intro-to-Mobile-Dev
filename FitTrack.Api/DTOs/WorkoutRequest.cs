@@ -37,4 +37,10 @@ public class WorkoutRequest
 
     [StringLength(500, ErrorMessage = "Notes cannot be longer than 500 characters.")]
     public string? Notes { get; set; }
+
+    /// <summary>Optional. Missing means false.</summary>
+    public bool IsCompleted { get; set; }
+
+    /// <summary>Optional. Missing means false.</summary>
+    public bool IsRecurring { get; set; }
 }

@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.Messaging;
 using FitTrack.Services;
+using FitTrack.Services.Api;
 using FitTrack.Services.Interfaces;
 using FitTrack.Services.Local;
 using FitTrack.ViewModels;
@@ -22,16 +23,30 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        // --- Services ---------------------------------------------------
-        // Registered as a Singleton because SQLiteAsyncConnection is safe
-        // to share across the whole app, and we want exactly one shared
-        // database connection rather than opening a new one per page.
+        // --- API client (workouts) -------------------------------------
+        // Workouts now live behind the API. The app never opens a SQL connection;
+        // the API is the only thing that talks to SQL Server.
         //
-        // This is the ONE line that changes when a real backend API is
-        // added later: swap LocalWorkoutRepository for something like
-        // ApiWorkoutRepository, and every ViewModel that depends on
-        // IWorkoutRepository keeps working without any changes.
-        builder.Services.AddSingleton<IWorkoutRepository, LocalWorkoutRepository>();
+        // The token is kept in SecureStorage. AuthTokenHandler adds it as a bearer header to
+        // every workout request. The login client has NO token handler: there is no token yet.
+        builder.Services.AddSingleton<ITokenStore, SecureTokenStore>();
+        builder.Services.AddTransient<AuthTokenHandler>();
+
+        var workoutClient = builder.Services
+            .AddHttpClient<IWorkoutApiClient, WorkoutApiClient>(ConfigureClient)
+            .AddHttpMessageHandler<AuthTokenHandler>();
+
+        var authClient = builder.Services
+            .AddHttpClient<IAuthService, AuthService>(ConfigureClient);
+
+#if DEBUG
+        // Debug builds only: trust the ASP.NET Core development certificate (see DevCertificateHandler).
+        workoutClient.ConfigurePrimaryHttpMessageHandler(() => DevCertificateHandler.Create());
+        authClient.ConfigurePrimaryHttpMessageHandler(() => DevCertificateHandler.Create());
+#endif
+
+        builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<LoginPage>();
         // Transient: a new instance is created each time the page is navigated to,
         // which is the right lifetime for page-scoped state like this.
         builder.Services.AddTransient<WorkoutLogViewModel>();
@@ -57,5 +72,11 @@ public static class MauiProgram
 #endif
 
         return builder.Build();
+    }
+
+    private static void ConfigureClient(HttpClient client)
+    {
+        client.BaseAddress = new Uri(ApiSettings.BaseAddress);
+        client.Timeout = TimeSpan.FromSeconds(15);
     }
 }

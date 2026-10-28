@@ -15,5 +15,7 @@ public class WorkoutResponse
     public int CaloriesBurned { get; set; }
     public IntensityLevel Intensity { get; set; }
     public string? Notes { get; set; }
+    public bool IsCompleted { get; set; }
+    public bool IsRecurring { get; set; }
     public DateTime CreatedUtc { get; set; }
 }

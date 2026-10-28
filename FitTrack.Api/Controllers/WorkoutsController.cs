@@ -1,13 +1,16 @@
 ﻿using FitTrack.Api.DTOs;
 using FitTrack.Api.Models;
 using FitTrack.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FitTrack.Api.Controllers;
 
 /// <summary>
 /// Thin by design: call the service once, then map the outcome to a status code.
-/// No file access and no business rules here.
+/// No file access and no business rules here. Reads are public; every write
+/// (POST, PUT, DELETE) uses the WorkoutWrite policy, which needs a valid JWT when
+/// authentication is turned on.
 /// </summary>
 [ApiController]
 [Route("api/workouts")]
@@ -41,8 +44,10 @@ public class WorkoutsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "WorkoutWrite")]
     [ProducesResponseType(typeof(WorkoutResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(WorkoutRequest request, CancellationToken cancellationToken)
     {
@@ -58,8 +63,10 @@ public class WorkoutsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = "WorkoutWrite")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(int id, WorkoutRequest request, CancellationToken cancellationToken)
@@ -76,7 +83,9 @@ public class WorkoutsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "WorkoutWrite")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {

@@ -8,6 +8,10 @@
              x:DataType="vm:WorkoutLogViewModel"
              Title="Workout Log">
 
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{Binding AuthButtonText}" Command="{Binding ToggleLoginCommand}" />
+    </ContentPage.ToolbarItems>
+
     <Grid RowDefinitions="*, Auto">
 
         <RefreshView Grid.Row="0"

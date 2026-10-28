@@ -44,6 +44,12 @@ public class Workout
 
     public string? Notes { get; set; }
 
+    /// <summary>Set from the app's swipe-to-complete. Defaults to false.</summary>
+    public bool IsCompleted { get; set; }
+
+    /// <summary>Whether the workout repeats. The API only stores the flag.</summary>
+    public bool IsRecurring { get; set; }
+
     /// <summary>Set by the service when the workout is created; never changes after that.</summary>
     public DateTime CreatedUtc { get; set; }
 }

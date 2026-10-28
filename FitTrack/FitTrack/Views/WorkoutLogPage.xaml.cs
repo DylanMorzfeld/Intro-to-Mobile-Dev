@@ -28,6 +28,13 @@ public partial class WorkoutLogPage : ContentPage
         _ = LoadSafeAsync();
     }
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        // A request should not outlive the screen that asked for it.
+        _viewModel.CancelLoad();
+    }
+
     private async Task LoadSafeAsync()
     {
         try
